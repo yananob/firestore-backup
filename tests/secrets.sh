@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+
+SECRETS=("LINE_TOKENS_N_TARGETS")
