@@ -33,7 +33,8 @@ class EventHandlerTest extends TestCase
 
         $eventHandler = new EventHandler($testLogger);
 
-        /** @var CloudEventInterface $eventMock */
+        /** @var CloudEventInterface&\PHPUnit\Framework\MockObject\MockObject $eventMock */
+        /** @var CloudEventInterface&\PHPUnit\Framework\MockObject\MockObject $eventMock */
         $eventMock = $this->createMock(CloudEventInterface::class);
 
         $eventHandler->handle($eventMock);
@@ -47,7 +48,7 @@ class EventHandlerTest extends TestCase
     {
         $eventHandler = new EventHandler();
 
-        /** @var CloudEventInterface $eventMock */
+        /** @var CloudEventInterface&\PHPUnit\Framework\MockObject\MockObject $eventMock */
         $eventMock = $this->createMock(CloudEventInterface::class);
 
         $eventHandler->handle($eventMock);
