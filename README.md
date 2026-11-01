@@ -1,6 +1,6 @@
-# {{VALUES_FUNCTION_NAME}}
+# firestore-backup
 
-Google Cloud Functions (PHP 8.4) 上で動作するアプリケーションのベーステンプレートリポジトリです。
+Google Cloud Functions (PHP 8.4) 上で動作するアプリケーションのリポジトリです。
 
 ---
 
@@ -57,6 +57,8 @@ Google Cloud Functions (PHP 8.4) 上で動作するアプリケーションの�
 
 ```bash
 composer install
+# ローカル環境で grpc 拡張モジュールがない場合は以下のように実行可能です
+composer install --ignore-platform-req=ext-grpc
 ```
 
 ### 2. 静的解析（PHPStan）の実行

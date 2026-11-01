@@ -14,6 +14,21 @@ use RuntimeException;
  */
 class AppConfig
 {
+    public const ENV_PRODUCTION = 'production';
+    public const ENV_TEST = 'test';
+    public const ENV_LOCAL = 'local';
+
+    /**
+     * サポートされている環境の一覧。
+     *
+     * @var list<string>
+     */
+    public const VALID_ENVIRONMENTS = [
+        self::ENV_PRODUCTION,
+        self::ENV_TEST,
+        self::ENV_LOCAL,
+    ];
+
     /**
      * 現在のアプリケーション環境を取得します。
      *
@@ -22,7 +37,19 @@ class AppConfig
     public static function getEnvironment(): string
     {
         $env = getenv('APP_ENV');
-        return is_string($env) ? $env : '';
+        return is_string($env) ? trim($env) : '';
+    }
+
+    /**
+     * 指定された環境名（または現在の環境）が有効な環境かどうかを検証します。
+     *
+     * @param string|null $env 検証する環境名（null の場合は現在の環境）
+     * @return bool 有効な環境の場合は true
+     */
+    public static function isValidEnvironment(?string $env = null): bool
+    {
+        $target = $env ?? self::getEnvironment();
+        return in_array($target, self::VALID_ENVIRONMENTS, true);
     }
 
     /**
@@ -32,7 +59,7 @@ class AppConfig
      */
     public static function isProduction(): bool
     {
-        return self::getEnvironment() === 'production';
+        return self::getEnvironment() === self::ENV_PRODUCTION;
     }
 
     /**
@@ -42,7 +69,7 @@ class AppConfig
      */
     public static function isTest(): bool
     {
-        return self::getEnvironment() === 'test';
+        return self::getEnvironment() === self::ENV_TEST;
     }
 
     /**
@@ -52,7 +79,7 @@ class AppConfig
      */
     public static function isLocal(): bool
     {
-        return self::getEnvironment() === 'local';
+        return self::getEnvironment() === self::ENV_LOCAL;
     }
 
     /**
@@ -63,8 +90,8 @@ class AppConfig
     public static function getFirestoreRootCollection(): string
     {
         return match (self::getEnvironment()) {
-            'production' => '{APP-NAME}',
-            'test' => '{APP-NAME}-test',
+            self::ENV_PRODUCTION => '{APP-NAME}',
+            self::ENV_TEST => '{APP-NAME}-test',
             default => '{APP-NAME}-test',
         };
     }
@@ -77,8 +104,8 @@ class AppConfig
     public static function getBasePath(): string
     {
         return match (self::getEnvironment()) {
-            'production' => '/{APP-NAME}',
-            'test' => '/{APP-NAME}-test',
+            self::ENV_PRODUCTION => '/{APP-NAME}',
+            self::ENV_TEST => '/{APP-NAME}-test',
             default => '',
         };
     }
@@ -109,6 +136,6 @@ class AppConfig
             return $projectId;
         }
 
-        throw new RuntimeException('Could not get Firestore project ID.');
+        throw new RuntimeException('Could not get Firestore project ID from environment variables or gcloud CLI.');
     }
 }

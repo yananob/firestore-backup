@@ -85,4 +85,30 @@ class AppConfigTest extends TestCase
         putenv('GCP_PROJECT_ID=my-test-project');
         $this->assertSame('my-test-project', AppConfig::getFirestoreProjectId());
     }
+
+    public function testIsValidEnvironment(): void
+    {
+        putenv('APP_ENV=production');
+        $this->assertTrue(AppConfig::isValidEnvironment());
+        $this->assertTrue(AppConfig::isValidEnvironment('production'));
+        $this->assertTrue(AppConfig::isValidEnvironment('test'));
+        $this->assertTrue(AppConfig::isValidEnvironment('local'));
+
+        putenv('APP_ENV=invalid-env');
+        $this->assertFalse(AppConfig::isValidEnvironment());
+        $this->assertFalse(AppConfig::isValidEnvironment('invalid-env'));
+        $this->assertFalse(AppConfig::isValidEnvironment(''));
+    }
+
+    public function testGetFirestoreProjectIdThrowsExceptionWhenNotFound(): void
+    {
+        putenv('GCP_PROJECT_ID');
+        putenv('GOOGLE_CLOUD_PROJECT');
+        putenv('GCLOUD_PROJECT');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Could not get Firestore project ID from environment variables or gcloud CLI.');
+
+        AppConfig::getFirestoreProjectId();
+    }
 }

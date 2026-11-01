@@ -38,6 +38,10 @@ class EventHandler
      */
     public function handle(CloudEventInterface $event): void
     {
-        $this->logger->info('Hello, World!');
+        $this->logger->info('Hello, World!', [
+            'id' => $event->getId(),
+            'type' => $event->getType(),
+            'source' => (string) $event->getSource(),
+        ]);
     }
 }
