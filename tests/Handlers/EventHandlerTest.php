@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Handlers;
 
+use App\Domain\Service\BackupService;
 use App\Handlers\EventHandler;
 use CloudEvents\V1\CloudEventInterface;
 use PHPUnit\Framework\TestCase;
@@ -11,7 +12,7 @@ use Psr\Log\AbstractLogger;
 
 class EventHandlerTest extends TestCase
 {
-    public function testHandleLogsHelloWorld(): void
+    public function testHandleExecutesBackupAllAndLogs(): void
     {
         $loggedMessages = [];
 
@@ -31,28 +32,30 @@ class EventHandlerTest extends TestCase
             }
         };
 
-        $eventHandler = new EventHandler($testLogger);
+        /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
+        $backupServiceMock = $this->createMock(BackupService::class);
+        $backupServiceMock->expects($this->once())
+            ->method('backupAll')
+            ->willReturn([
+                'total' => 2,
+                'success' => 2,
+                'failed' => 0,
+                'details' => [],
+            ]);
+
+        $eventHandler = new EventHandler($testLogger, $backupServiceMock);
 
         /** @var CloudEventInterface&\PHPUnit\Framework\MockObject\MockObject $eventMock */
-        /** @var CloudEventInterface&\PHPUnit\Framework\MockObject\MockObject $eventMock */
         $eventMock = $this->createMock(CloudEventInterface::class);
+        $eventMock->method('getId')->willReturn('event-12345');
+        $eventMock->method('getType')->willReturn('google.cloud.pubsub.topic.publish');
 
         $eventHandler->handle($eventMock);
 
-        $this->assertCount(1, $loggedMessages);
+        $this->assertCount(2, $loggedMessages);
         $this->assertSame('info', $loggedMessages[0]['level']);
-        $this->assertSame('Hello, World!', $loggedMessages[0]['message']);
-    }
-
-    public function testHandleDefaultConstructorRunsWithoutError(): void
-    {
-        $eventHandler = new EventHandler();
-
-        /** @var CloudEventInterface&\PHPUnit\Framework\MockObject\MockObject $eventMock */
-        $eventMock = $this->createMock(CloudEventInterface::class);
-
-        $eventHandler->handle($eventMock);
-
-        $this->expectNotToPerformAssertions();
+        $this->assertStringContainsString('Starting Firestore backup triggered by CloudEvent (ID: event-12345', (string) $loggedMessages[0]['message']);
+        $this->assertSame('info', $loggedMessages[1]['level']);
+        $this->assertStringContainsString('Backup completed: Total: 2, Success: 2, Failed: 0', (string) $loggedMessages[1]['message']);
     }
 }
