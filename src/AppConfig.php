@@ -56,6 +56,35 @@ class AppConfig
     }
 
     /**
+     * GCP/FirestoreのプロジェクトIDを取得します。
+     * 環境変数 (GCP_PROJECT_ID, GOOGLE_CLOUD_PROJECT, GCLOUD_PROJECT) を優先し、
+     * 未設定の場合は gcloud CLI の設定値を取得します。
+     *
+     * @return string FirestoreプロジェクトID。
+     * @throws RuntimeException プロジェクトIDを取得できない場合。
+     */
+    public static function getFirestoreProjectId(): string
+    {
+        $envVars = ['GCP_PROJECT_ID', 'GOOGLE_CLOUD_PROJECT', 'GCLOUD_PROJECT'];
+        foreach ($envVars as $var) {
+            $val = getenv($var);
+            if (is_string($val) && trim($val) !== '') {
+                return trim($val);
+            }
+        }
+
+        $output = [];
+        $exitCode = 1;
+        exec('gcloud config get-value project 2>/dev/null', $output, $exitCode);
+        $projectId = trim(implode("\n", $output));
+        if ($exitCode === 0 && $projectId !== '' && $projectId !== '(unset)') {
+            return $projectId;
+        }
+
+        throw new RuntimeException('Could not get Firestore project ID.');
+    }
+
+    /**
      * Firestoreのルートコレクション名を取得します。
      *
      * @return string Firestoreコレクションの名前。

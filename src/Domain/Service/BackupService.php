@@ -13,8 +13,10 @@ use Google\Cloud\Firestore\CollectionReference;
 use Google\Cloud\Firestore\DocumentReference;
 use Google\Cloud\Firestore\DocumentSnapshot;
 use Google\Cloud\Firestore\FirestoreClient;
+use Monolog\Handler\StreamHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use RuntimeException;
 use Throwable;
 
@@ -37,9 +39,16 @@ class BackupService
         $this->configRepository = $configRepository;
         $this->storageService = $storageService;
         $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
+            'projectId' => AppConfig::getFirestoreProjectId(),
             'transport' => 'rest',
         ]);
-        $this->logger = $logger ?? new NullLogger();
+        if ($logger === null) {
+            $monolog = new Logger('backup_service_logger');
+            $monolog->pushHandler(new StreamHandler('php://stdout', Level::Info));
+            $this->logger = $monolog;
+        } else {
+            $this->logger = $logger;
+        }
     }
 
     /**
@@ -72,6 +81,8 @@ class BackupService
 
         try {
             $data = $this->fetchDataFromPath($config->getFirestorePath());
+            $this->logger->debug(var_export($data, true));
+
             $jsonContent = json_encode([
                 'configId' => $config->getId(),
                 'configName' => $config->getName(),

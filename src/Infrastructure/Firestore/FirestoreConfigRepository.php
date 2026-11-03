@@ -9,6 +9,7 @@ use App\Domain\Model\BackupConfig;
 use App\Domain\Model\CommonConfig;
 use App\Domain\Repository\ConfigRepositoryInterface;
 use Google\Cloud\Firestore\FirestoreClient;
+use RuntimeException;
 
 /**
  * Firestore をデータストアとする設定リポジトリ実装
@@ -21,6 +22,7 @@ class FirestoreConfigRepository implements ConfigRepositoryInterface
     public function __construct(?FirestoreClient $firestoreClient = null, ?string $rootCollection = null)
     {
         $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
+            'projectId' => AppConfig::getFirestoreProjectId(),
             'transport' => 'rest',
         ]);
         $this->rootCollection = $rootCollection ?? AppConfig::getFirestoreRootCollection();
