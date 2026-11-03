@@ -6,7 +6,7 @@ source ./_myapps-common/test/export_secrets.sh ${SECRETS[*]}
 
 # Launch function
 export FUNCTION_TARGET=main_http
-APP_ENV=local php -S localhost:${PORT:-8080} vendor/bin/router.php
+GCP_PROJECT_ID=nobu5-393106 APP_ENV=local php8.4 -S localhost:${PORT:-8080} vendor/bin/router.php
 
 
 source ./_myapps-common/test/unset_secrets.sh ${SECRETS[*]}

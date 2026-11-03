@@ -9,12 +9,25 @@ use App\Domain\Model\CommonConfig;
 use App\Domain\Repository\ConfigRepositoryInterface;
 use App\Domain\Service\BackupService;
 use App\Domain\Service\StorageServiceInterface;
+use ArrayIterator;
 use Carbon\Carbon;
+use Google\Cloud\Core\Iterator\ItemIterator;
+use Google\Cloud\Firestore\CollectionReference;
+use Google\Cloud\Firestore\DocumentReference;
+use Google\Cloud\Firestore\DocumentSnapshot;
 use Google\Cloud\Firestore\FirestoreClient;
 use PHPUnit\Framework\TestCase;
 
 class BackupServiceTest extends TestCase
 {
+    /**
+     * @param array<int, mixed> $items
+     */
+    private function createItemIterator(array $items): ItemIterator
+    {
+        return new ItemIterator(new ArrayIterator([$items]));
+    }
+
     public function testBackupSingleConfigUploadsToGcs(): void
     {
         $backupConfig = new BackupConfig('c1', 'users-data', 'users');
@@ -113,5 +126,186 @@ class BackupServiceTest extends TestCase
         $this->assertSame(1, $results['success']);
         $this->assertSame(0, $results['failed']);
         $this->assertCount(1, $uploaded);
+    }
+
+    public function testFetchDataFromPathWithCollectionAndNestedSubcollections(): void
+    {
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        /** @var StorageServiceInterface&\PHPUnit\Framework\MockObject\MockObject $storageMock */
+        $storageMock = $this->createMock(StorageServiceInterface::class);
+        /** @var FirestoreClient&\PHPUnit\Framework\MockObject\MockObject $firestoreMock */
+        $firestoreMock = $this->createMock(FirestoreClient::class);
+
+        /** @var CollectionReference&\PHPUnit\Framework\MockObject\MockObject $colRef */
+        $colRef = $this->createMock(CollectionReference::class);
+        $firestoreMock->expects($this->once())
+            ->method('collection')
+            ->with('users')
+            ->willReturn($colRef);
+
+        /** @var DocumentSnapshot&\PHPUnit\Framework\MockObject\MockObject $userDocSnapshot */
+        $userDocSnapshot = $this->createMock(DocumentSnapshot::class);
+        $userDocSnapshot->method('exists')->willReturn(true);
+        $userDocSnapshot->method('id')->willReturn('u1');
+        $userDocSnapshot->method('data')->willReturn(['name' => 'Alice']);
+
+        /** @var DocumentReference&\PHPUnit\Framework\MockObject\MockObject $userDocRef */
+        $userDocRef = $this->createMock(DocumentReference::class);
+        $userDocSnapshot->method('reference')->willReturn($userDocRef);
+
+        $colRef->method('documents')->willReturn([$userDocSnapshot]);
+
+        /** @var CollectionReference&\PHPUnit\Framework\MockObject\MockObject $subColRef */
+        $subColRef = $this->createMock(CollectionReference::class);
+        $subColRef->method('id')->willReturn('orders');
+        $userDocRef->method('collections')->willReturn($this->createItemIterator([$subColRef]));
+
+        /** @var DocumentSnapshot&\PHPUnit\Framework\MockObject\MockObject $orderDocSnapshot */
+        $orderDocSnapshot = $this->createMock(DocumentSnapshot::class);
+        $orderDocSnapshot->method('exists')->willReturn(true);
+        $orderDocSnapshot->method('id')->willReturn('order1');
+        $orderDocSnapshot->method('data')->willReturn(['total' => 1000]);
+
+        /** @var DocumentReference&\PHPUnit\Framework\MockObject\MockObject $orderDocRef */
+        $orderDocRef = $this->createMock(DocumentReference::class);
+        $orderDocRef->method('collections')->willReturn($this->createItemIterator([]));
+        $orderDocSnapshot->method('reference')->willReturn($orderDocRef);
+
+        $subColRef->method('documents')->willReturn([$orderDocSnapshot]);
+
+        $backupService = new BackupService($repoMock, $storageMock, $firestoreMock);
+        $data = $backupService->fetchDataFromPath('users');
+
+        $this->assertArrayHasKey('u1', $data);
+        $this->assertSame('Alice', $data['u1']['name']);
+        $this->assertArrayHasKey('_collections', $data['u1']);
+        $this->assertArrayHasKey('orders', $data['u1']['_collections']);
+        $this->assertArrayHasKey('order1', $data['u1']['_collections']['orders']);
+        $this->assertSame(1000, $data['u1']['_collections']['orders']['order1']['total']);
+    }
+
+    public function testFetchDataFromPathWithDocumentAndNestedSubcollections(): void
+    {
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        /** @var StorageServiceInterface&\PHPUnit\Framework\MockObject\MockObject $storageMock */
+        $storageMock = $this->createMock(StorageServiceInterface::class);
+        /** @var FirestoreClient&\PHPUnit\Framework\MockObject\MockObject $firestoreMock */
+        $firestoreMock = $this->createMock(FirestoreClient::class);
+
+        /** @var DocumentReference&\PHPUnit\Framework\MockObject\MockObject $docRef */
+        $docRef = $this->createMock(DocumentReference::class);
+        $firestoreMock->expects($this->once())
+            ->method('document')
+            ->with('groups/g1')
+            ->willReturn($docRef);
+
+        /** @var DocumentSnapshot&\PHPUnit\Framework\MockObject\MockObject $docSnapshot */
+        $docSnapshot = $this->createMock(DocumentSnapshot::class);
+        $docSnapshot->method('exists')->willReturn(true);
+        $docSnapshot->method('id')->willReturn('g1');
+        $docSnapshot->method('data')->willReturn(['title' => 'Developers']);
+        $docRef->method('snapshot')->willReturn($docSnapshot);
+
+        /** @var CollectionReference&\PHPUnit\Framework\MockObject\MockObject $membersColRef */
+        $membersColRef = $this->createMock(CollectionReference::class);
+        $membersColRef->method('id')->willReturn('members');
+        $docRef->method('collections')->willReturn($this->createItemIterator([$membersColRef]));
+
+        /** @var DocumentSnapshot&\PHPUnit\Framework\MockObject\MockObject $memberDocSnapshot */
+        $memberDocSnapshot = $this->createMock(DocumentSnapshot::class);
+        $memberDocSnapshot->method('exists')->willReturn(true);
+        $memberDocSnapshot->method('id')->willReturn('m1');
+        $memberDocSnapshot->method('data')->willReturn(['role' => 'lead']);
+
+        /** @var DocumentReference&\PHPUnit\Framework\MockObject\MockObject $memberDocRef */
+        $memberDocRef = $this->createMock(DocumentReference::class);
+        $memberDocRef->method('collections')->willReturn($this->createItemIterator([]));
+        $memberDocSnapshot->method('reference')->willReturn($memberDocRef);
+
+        $membersColRef->method('documents')->willReturn([$memberDocSnapshot]);
+
+        $backupService = new BackupService($repoMock, $storageMock, $firestoreMock);
+        $data = $backupService->fetchDataFromPath('groups/g1');
+
+        $this->assertArrayHasKey('g1', $data);
+        $this->assertSame('Developers', $data['g1']['title']);
+        $this->assertArrayHasKey('_collections', $data['g1']);
+        $this->assertArrayHasKey('members', $data['g1']['_collections']);
+        $this->assertSame('lead', $data['g1']['_collections']['members']['m1']['role']);
+    }
+
+    public function testFetchDataFromPathWithMultiLevelNesting(): void
+    {
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        /** @var StorageServiceInterface&\PHPUnit\Framework\MockObject\MockObject $storageMock */
+        $storageMock = $this->createMock(StorageServiceInterface::class);
+        /** @var FirestoreClient&\PHPUnit\Framework\MockObject\MockObject $firestoreMock */
+        $firestoreMock = $this->createMock(FirestoreClient::class);
+
+        // Document: company/c1 -> subcol: departments -> doc: d1 -> subcol: employees -> doc: e1
+        /** @var DocumentReference&\PHPUnit\Framework\MockObject\MockObject $docRef */
+        $docRef = $this->createMock(DocumentReference::class);
+        $firestoreMock->expects($this->once())
+            ->method('document')
+            ->with('company/c1')
+            ->willReturn($docRef);
+
+        /** @var DocumentSnapshot&\PHPUnit\Framework\MockObject\MockObject $companySnapshot */
+        $companySnapshot = $this->createMock(DocumentSnapshot::class);
+        $companySnapshot->method('exists')->willReturn(true);
+        $companySnapshot->method('id')->willReturn('c1');
+        $companySnapshot->method('data')->willReturn(['name' => 'Acme Corp']);
+        $docRef->method('snapshot')->willReturn($companySnapshot);
+
+        /** @var CollectionReference&\PHPUnit\Framework\MockObject\MockObject $deptColRef */
+        $deptColRef = $this->createMock(CollectionReference::class);
+        $deptColRef->method('id')->willReturn('departments');
+        $docRef->method('collections')->willReturn($this->createItemIterator([$deptColRef]));
+
+        /** @var DocumentSnapshot&\PHPUnit\Framework\MockObject\MockObject $deptSnapshot */
+        $deptSnapshot = $this->createMock(DocumentSnapshot::class);
+        $deptSnapshot->method('exists')->willReturn(true);
+        $deptSnapshot->method('id')->willReturn('d1');
+        $deptSnapshot->method('data')->willReturn(['name' => 'Engineering']);
+
+        /** @var DocumentReference&\PHPUnit\Framework\MockObject\MockObject $deptDocRef */
+        $deptDocRef = $this->createMock(DocumentReference::class);
+        $deptSnapshot->method('reference')->willReturn($deptDocRef);
+        $deptColRef->method('documents')->willReturn([$deptSnapshot]);
+
+        /** @var CollectionReference&\PHPUnit\Framework\MockObject\MockObject $empColRef */
+        $empColRef = $this->createMock(CollectionReference::class);
+        $empColRef->method('id')->willReturn('employees');
+        $deptDocRef->method('collections')->willReturn($this->createItemIterator([$empColRef]));
+
+        /** @var DocumentSnapshot&\PHPUnit\Framework\MockObject\MockObject $empSnapshot */
+        $empSnapshot = $this->createMock(DocumentSnapshot::class);
+        $empSnapshot->method('exists')->willReturn(true);
+        $empSnapshot->method('id')->willReturn('e1');
+        $empSnapshot->method('data')->willReturn(['name' => 'Charlie']);
+
+        /** @var DocumentReference&\PHPUnit\Framework\MockObject\MockObject $empDocRef */
+        $empDocRef = $this->createMock(DocumentReference::class);
+        $empDocRef->method('collections')->willReturn($this->createItemIterator([]));
+        $empSnapshot->method('reference')->willReturn($empDocRef);
+        $empColRef->method('documents')->willReturn([$empSnapshot]);
+
+        $backupService = new BackupService($repoMock, $storageMock, $firestoreMock);
+        $data = $backupService->fetchDataFromPath('company/c1');
+
+        $this->assertArrayHasKey('c1', $data);
+        $this->assertSame('Acme Corp', $data['c1']['name']);
+        $this->assertArrayHasKey('_collections', $data['c1']);
+        $this->assertArrayHasKey('departments', $data['c1']['_collections']);
+        $this->assertArrayHasKey('d1', $data['c1']['_collections']['departments']);
+        $this->assertSame('Engineering', $data['c1']['_collections']['departments']['d1']['name']);
+
+        $nestedEmployees = $data['c1']['_collections']['departments']['d1']['_collections']['employees'];
+        $this->assertArrayHasKey('e1', $nestedEmployees);
+        $this->assertSame('Charlie', $nestedEmployees['e1']['name']);
+        $this->assertArrayNotHasKey('_collections', $nestedEmployees['e1']);
     }
 }

@@ -61,10 +61,10 @@ Firestore へのアクセスには、Application Default Credentials (ADC) や G
 
 ### ライブラリの初期化例
 
-Google Cloud PHP クライアントライブラリを使用する場合、引数なしで初期化します。
+Firestore クライアントの生成は `App\Infrastructure\Firestore\FirestoreClientFactory` に集約し、プロジェクトIDと通信方式を一元管理します。各サービスやリポジトリではファクトリーを利用し、テスト時などにクライアントを差し替える場合はコンストラクターから注入します。
 
 ```php
-$firestore = new FirestoreClient();
+$firestore = FirestoreClientFactory::create();
 ```
 
 ---
