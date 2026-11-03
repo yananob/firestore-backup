@@ -68,7 +68,7 @@ class BackupService
 
         // ファイル名に安全な名前（連続する記号を単一アンダースコアに整形）
         $safeName = preg_replace('/[^a-zA-Z0-9_\-]+/', '_', $config->getName()) ?: 'backup';
-        $fileName = sprintf('%s_%s.json', $config->getId(), trim($safeName, '_'));
+        $fileName = sprintf('%s_%s.json', trim($safeName, '_'), $config->getId());
 
         $targetGcsPath = $basePath !== ''
             ? sprintf('%s/%s/%s', $basePath, $dateStr, $fileName)

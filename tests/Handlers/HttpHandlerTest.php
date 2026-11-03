@@ -22,7 +22,7 @@ class HttpHandlerTest extends TestCase
         $repoMock = $this->createMock(ConfigRepositoryInterface::class);
         $repoMock->method('getCommonConfig')->willReturn(new CommonConfig('test-bucket', 'backups'));
         $repoMock->method('getBackupConfigs')->willReturn([
-            'c1' => new BackupConfig('c1', '設定1', 'users'),
+            'c1' => new BackupConfig('c1', '設定1', 'users/u1'),
         ]);
 
         /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
