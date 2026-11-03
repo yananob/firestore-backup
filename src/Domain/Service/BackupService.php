@@ -148,8 +148,8 @@ class BackupService
 
     /**
      * 指定されたパスからドキュメントデータを取得します。
-     * コレクションパスの場合は配下の全ドキュメント（IDをキーとする連想配列）、
-     * ドキュメントパスの場合は単一ドキュメントを配列で返します。
+     * コレクションパスの場合は配下の全ドキュメント（サブコレクション含む、IDをキーとする連想配列）、
+     * ドキュメントパスの場合は単一ドキュメント（サブコレクション含む）を配列で返します。
      *
      * @return array<string, mixed>
      */
@@ -166,29 +166,61 @@ class BackupService
         // 奇数個 = コレクション (例: "users", "groups/g1/members")
         if ($count % 2 === 1) {
             $colRef = $this->firestoreClient->collection($cleanPath);
-            $documents = $colRef->documents();
-            $data = [];
-            foreach ($documents as $doc) {
-                if ($doc->exists()) {
-                    /** @var array<string, mixed> $docData */
-                    $docData = $doc->data();
-                    $data[$doc->id()] = $docData;
-                }
-            }
-            return $data;
+            return $this->fetchCollectionData($colRef);
         }
 
         // 偶数個 = 単一ドキュメント (例: "users/u1")
         $docRef = $this->firestoreClient->document($cleanPath);
         $snapshot = $docRef->snapshot();
         if ($snapshot->exists()) {
-            /** @var array<string, mixed> $docData */
-            $docData = $snapshot->data();
             return [
-                $snapshot->id() => $docData,
+                $snapshot->id() => $this->fetchDocumentData($docRef, $snapshot),
             ];
         }
 
         return [];
+    }
+
+    /**
+     * コレクション配下の全ドキュメント（サブコレクション含む）を再帰的に取得します。
+     *
+     * @return array<string, mixed>
+     */
+    public function fetchCollectionData(CollectionReference $colRef): array
+    {
+        $documents = $colRef->documents();
+        $data = [];
+        foreach ($documents as $doc) {
+            if ($doc->exists()) {
+                $data[$doc->id()] = $this->fetchDocumentData($doc->reference(), $doc);
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * ドキュメントデータおよび配下のサブコレクションを再帰的に取得します。
+     *
+     * @return array<string, mixed>
+     */
+    public function fetchDocumentData(DocumentReference $docRef, ?DocumentSnapshot $snapshot = null): array
+    {
+        $docSnapshot = $snapshot ?? $docRef->snapshot();
+        /** @var array<string, mixed> $docData */
+        $docData = $docSnapshot->exists() ? (array) $docSnapshot->data() : [];
+
+        $collections = [];
+        foreach ($docRef->collections() as $subCol) {
+            $subColData = $this->fetchCollectionData($subCol);
+            if (!empty($subColData)) {
+                $collections[$subCol->id()] = $subColData;
+            }
+        }
+
+        if (!empty($collections)) {
+            $docData['_collections'] = $collections;
+        }
+
+        return $docData;
     }
 }
