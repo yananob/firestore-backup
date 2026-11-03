@@ -176,20 +176,18 @@ class BackupService
 
         // 奇数個 = コレクション (例: "users", "groups/g1/members")
         if ($count % 2 === 1) {
+            $this->logger->info("Fetching collection data for path: {$cleanPath}");
             $colRef = $this->firestoreClient->collection($cleanPath);
             return $this->fetchCollectionData($colRef);
         }
 
         // 偶数個 = 単一ドキュメント (例: "users/u1")
+        $this->logger->info("Fetching document data for path: {$cleanPath}");
         $docRef = $this->firestoreClient->document($cleanPath);
         $snapshot = $docRef->snapshot();
-        if ($snapshot->exists()) {
-            return [
+        return [
                 $snapshot->id() => $this->fetchDocumentData($docRef, $snapshot),
             ];
-        }
-
-        return [];
     }
 
     /**
@@ -199,14 +197,13 @@ class BackupService
      */
     public function fetchCollectionData(CollectionReference $colRef): array
     {
+        $this->logger->info("Fetching collection data for reference: " . $colRef->id());
         $documents = $colRef->documents();
+        $this->logger->info("Found " . iterator_count($documents) . " documents in collection: " . $colRef->id());
         $data = [];
         foreach ($documents as $doc) {
-            if ($doc->exists()) {
-                $data[$doc->id()] = $this->fetchDocumentData($doc->reference(), $doc);
-            }
+            $data[$doc->id()] = $this->fetchDocumentData($doc->reference(), $doc);
         }
-        $this->logger->info("Fetched collection :" . var_export($data, true));
         return $data;
     }
 
@@ -220,6 +217,7 @@ class BackupService
         $docSnapshot = $snapshot ?? $docRef->snapshot();
         /** @var array<string, mixed> $docData */
         $docData = $docSnapshot->exists() ? (array) $docSnapshot->data() : [];
+        $this->logger->info("Fetched document data for {$docRef->id()}: " . var_export($docData, true));
 
         $collections = [];
         foreach ($docRef->collections() as $subCol) {
@@ -233,7 +231,6 @@ class BackupService
             $docData['_collections'] = $collections;
         }
 
-        $this->logger->info("Fetched document data for {$docRef->id()}: " . var_export($docData, true));
         return $docData;
     }
 }
