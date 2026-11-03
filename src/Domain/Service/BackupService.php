@@ -37,7 +37,7 @@ class BackupService
         $this->configRepository = $configRepository;
         $this->storageService = $storageService;
         $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
-            'projectId' => AppConfig::getFirestoreProjectId(),
+            'transport' => 'rest',
         ]);
         $this->logger = $logger ?? new NullLogger();
     }

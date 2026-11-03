@@ -18,7 +18,7 @@ class FirestorePathService
     public function __construct(?FirestoreClient $firestoreClient = null)
     {
         $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
-            'projectId' => AppConfig::getFirestoreProjectId(),
+            'transport' => 'rest',
         ]);
     }
 
