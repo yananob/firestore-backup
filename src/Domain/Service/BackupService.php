@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Service;
 
-use App\AppConfig;
 use App\Domain\Model\BackupConfig;
 use App\Domain\Model\CommonConfig;
 use App\Domain\Repository\ConfigRepositoryInterface;
+use App\Infrastructure\Firestore\FirestoreClientFactory;
 use Carbon\Carbon;
 use Google\Cloud\Firestore\CollectionReference;
 use Google\Cloud\Firestore\DocumentReference;
@@ -38,10 +38,7 @@ class BackupService
     ) {
         $this->configRepository = $configRepository;
         $this->storageService = $storageService;
-        $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
-            'projectId' => AppConfig::getFirestoreProjectId(),
-            'transport' => 'rest',
-        ]);
+        $this->firestoreClient = $firestoreClient ?? FirestoreClientFactory::create();
         if ($logger === null) {
             $monolog = new Logger('backup_service_logger');
             $monolog->pushHandler(new StreamHandler('php://stdout', Level::Info));

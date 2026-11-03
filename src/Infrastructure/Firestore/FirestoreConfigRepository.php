@@ -21,10 +21,7 @@ class FirestoreConfigRepository implements ConfigRepositoryInterface
 
     public function __construct(?FirestoreClient $firestoreClient = null, ?string $rootCollection = null)
     {
-        $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
-            'projectId' => AppConfig::getFirestoreProjectId(),
-            'transport' => 'rest',
-        ]);
+        $this->firestoreClient = $firestoreClient ?? FirestoreClientFactory::create();
         $this->rootCollection = $rootCollection ?? AppConfig::getFirestoreRootCollection();
     }
 
