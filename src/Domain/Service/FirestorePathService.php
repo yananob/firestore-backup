@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Service;
 
-use App\AppConfig;
+use App\Infrastructure\Firestore\FirestoreClientFactory;
 use Google\Cloud\Firestore\FirestoreClient;
 use Throwable;
 
@@ -17,9 +17,7 @@ class FirestorePathService
 
     public function __construct(?FirestoreClient $firestoreClient = null)
     {
-        $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
-            'transport' => 'rest',
-        ]);
+        $this->firestoreClient = $firestoreClient ?? FirestoreClientFactory::create();
     }
 
     /**

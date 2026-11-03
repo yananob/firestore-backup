@@ -52,6 +52,7 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 | 変数名 | 説明 | 必須 |
 | :--- | :--- | :--- |
 | `APP_ENV` | 実行環境（`production`, `test`, `local`）。 | はい |
+| `GCP_PROJECT_ID` | Google Cloud プロジェクト ID。未設定時は他の環境変数または gcloud CLI の設定値を使用します。 | 推奨 |
 
 ---
 

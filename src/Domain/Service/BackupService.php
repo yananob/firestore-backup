@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace App\Domain\Service;
 
-use App\AppConfig;
 use App\Domain\Model\BackupConfig;
 use App\Domain\Model\CommonConfig;
 use App\Domain\Repository\ConfigRepositoryInterface;
+use App\Infrastructure\Firestore\FirestoreClientFactory;
 use Carbon\Carbon;
 use Google\Cloud\Firestore\CollectionReference;
 use Google\Cloud\Firestore\DocumentReference;
 use Google\Cloud\Firestore\DocumentSnapshot;
 use Google\Cloud\Firestore\FirestoreClient;
+use Monolog\Handler\StreamHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use RuntimeException;
 use Throwable;
 
@@ -36,10 +38,14 @@ class BackupService
     ) {
         $this->configRepository = $configRepository;
         $this->storageService = $storageService;
-        $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
-            'transport' => 'rest',
-        ]);
-        $this->logger = $logger ?? new NullLogger();
+        $this->firestoreClient = $firestoreClient ?? FirestoreClientFactory::create();
+        if ($logger === null) {
+            $monolog = new Logger('backup_service_logger');
+            $monolog->pushHandler(new StreamHandler('php://stdout', Level::Info));
+            $this->logger = $monolog;
+        } else {
+            $this->logger = $logger;
+        }
     }
 
     /**
@@ -72,6 +78,7 @@ class BackupService
 
         try {
             $data = $this->fetchDataFromPath($config->getFirestorePath());
+
             $jsonContent = json_encode([
                 'configId' => $config->getId(),
                 'configName' => $config->getName(),
@@ -148,8 +155,8 @@ class BackupService
 
     /**
      * 指定されたパスからドキュメントデータを取得します。
-     * コレクションパスの場合は配下の全ドキュメント（IDをキーとする連想配列）、
-     * ドキュメントパスの場合は単一ドキュメントを配列で返します。
+     * コレクションパスの場合は配下の全ドキュメント（サブコレクション含む、IDをキーとする連想配列）、
+     * ドキュメントパスの場合は単一ドキュメント（サブコレクション含む）を配列で返します。
      *
      * @return array<string, mixed>
      */
@@ -165,30 +172,60 @@ class BackupService
 
         // 奇数個 = コレクション (例: "users", "groups/g1/members")
         if ($count % 2 === 1) {
+            $this->logger->info("Fetching collection data for path: {$cleanPath}");
             $colRef = $this->firestoreClient->collection($cleanPath);
-            $documents = $colRef->documents();
-            $data = [];
-            foreach ($documents as $doc) {
-                if ($doc->exists()) {
-                    /** @var array<string, mixed> $docData */
-                    $docData = $doc->data();
-                    $data[$doc->id()] = $docData;
-                }
-            }
-            return $data;
+            return $this->fetchCollectionData($colRef);
         }
 
         // 偶数個 = 単一ドキュメント (例: "users/u1")
+        $this->logger->info("Fetching document data for path: {$cleanPath}");
         $docRef = $this->firestoreClient->document($cleanPath);
         $snapshot = $docRef->snapshot();
-        if ($snapshot->exists()) {
-            /** @var array<string, mixed> $docData */
-            $docData = $snapshot->data();
-            return [
-                $snapshot->id() => $docData,
+        return [
+                $snapshot->id() => $this->fetchDocumentData($docRef, $snapshot),
             ];
+    }
+
+    /**
+     * コレクション配下の全ドキュメント（サブコレクション含む）を再帰的に取得します。
+     *
+     * @return array<string, mixed>
+     */
+    public function fetchCollectionData(CollectionReference $colRef): array
+    {
+        $this->logger->info("Fetching collection data for reference: " . $colRef->id());
+        $documents = $colRef->documents();
+        $this->logger->info("Found " . iterator_count($documents) . " documents in collection: " . $colRef->id());
+        $data = [];
+        foreach ($documents as $doc) {
+            $data[$doc->id()] = $this->fetchDocumentData($doc->reference(), $doc);
+        }
+        return $data;
+    }
+
+    /**
+     * ドキュメントデータおよび配下のサブコレクションを再帰的に取得します。
+     *
+     * @return array<string, mixed>
+     */
+    public function fetchDocumentData(DocumentReference $docRef, ?DocumentSnapshot $snapshot = null): array
+    {
+        $docSnapshot = $snapshot ?? $docRef->snapshot();
+        /** @var array<string, mixed> $docData */
+        $docData = $docSnapshot->exists() ? (array) $docSnapshot->data() : [];
+
+        $collections = [];
+        foreach ($docRef->collections() as $subCol) {
+            $subColData = $this->fetchCollectionData($subCol);
+            if (!empty($subColData)) {
+                $collections[$subCol->id()] = $subColData;
+            }
         }
 
-        return [];
+        if (!empty($collections)) {
+            $docData['_collections'] = $collections;
+        }
+
+        return $docData;
     }
 }
