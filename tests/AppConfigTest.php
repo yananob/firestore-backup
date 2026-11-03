@@ -43,8 +43,8 @@ class AppConfigTest extends TestCase
         $this->assertTrue(AppConfig::isProduction());
         $this->assertFalse(AppConfig::isTest());
         $this->assertFalse(AppConfig::isLocal());
-        $this->assertSame('{APP-NAME}', AppConfig::getFirestoreRootCollection());
-        $this->assertSame('/{APP-NAME}', AppConfig::getBasePath());
+        $this->assertSame('{firestore-backup}', AppConfig::getFirestoreRootCollection());
+        $this->assertSame('/{firestore-backup}', AppConfig::getBasePath());
     }
 
     public function testGetEnvironmentTest(): void
@@ -54,8 +54,8 @@ class AppConfigTest extends TestCase
         $this->assertFalse(AppConfig::isProduction());
         $this->assertTrue(AppConfig::isTest());
         $this->assertFalse(AppConfig::isLocal());
-        $this->assertSame('{APP-NAME}-test', AppConfig::getFirestoreRootCollection());
-        $this->assertSame('/{APP-NAME}-test', AppConfig::getBasePath());
+        $this->assertSame('{firestore-backup}-test', AppConfig::getFirestoreRootCollection());
+        $this->assertSame('/{firestore-backup}-test', AppConfig::getBasePath());
     }
 
     public function testGetEnvironmentLocal(): void
@@ -65,7 +65,7 @@ class AppConfigTest extends TestCase
         $this->assertFalse(AppConfig::isProduction());
         $this->assertFalse(AppConfig::isTest());
         $this->assertTrue(AppConfig::isLocal());
-        $this->assertSame('{APP-NAME}-test', AppConfig::getFirestoreRootCollection());
+        $this->assertSame('{firestore-backup}-test', AppConfig::getFirestoreRootCollection());
         $this->assertSame('', AppConfig::getBasePath());
     }
 
@@ -76,7 +76,7 @@ class AppConfigTest extends TestCase
         $this->assertFalse(AppConfig::isProduction());
         $this->assertFalse(AppConfig::isTest());
         $this->assertFalse(AppConfig::isLocal());
-        $this->assertSame('{APP-NAME}-test', AppConfig::getFirestoreRootCollection());
+        $this->assertSame('{firestore-backup}-test', AppConfig::getFirestoreRootCollection());
         $this->assertSame('', AppConfig::getBasePath());
     }
 

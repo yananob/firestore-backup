@@ -63,9 +63,9 @@ class AppConfig
     public static function getFirestoreRootCollection(): string
     {
         return match (self::getEnvironment()) {
-            'production' => '{APP-NAME}',
-            'test' => '{APP-NAME}-test',
-            default => '{APP-NAME}-test',
+            'production' => '{firestore-backup}',
+            'test' => '{firestore-backup}-test',
+            default => '{firestore-backup}-test',
         };
     }
 
@@ -77,8 +77,8 @@ class AppConfig
     public static function getBasePath(): string
     {
         return match (self::getEnvironment()) {
-            'production' => '/{APP-NAME}',
-            'test' => '/{APP-NAME}-test',
+            'production' => '/{firestore-backup}',
+            'test' => '/{firestore-backup}-test',
             default => '',
         };
     }

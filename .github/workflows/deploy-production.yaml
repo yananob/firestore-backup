@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ vars.FUNCTION_NAME || '{{VALUES_FUNCTION_NAME}}' }}-deploy-production
+  group: ${{ vars.FUNCTION_NAME || 'firestore-backup' }}-deploy-production
   cancel-in-progress: true
 
 permissions:
@@ -15,7 +15,7 @@ permissions:
   id-token: 'write'
 
 env:
-  FUNCTION_NAME: ${{ vars.FUNCTION_NAME || '{{VALUES_FUNCTION_NAME}}' }}
+  FUNCTION_NAME: ${{ vars.FUNCTION_NAME || 'firestore-backup' }}
 
 jobs:
   prepare:
