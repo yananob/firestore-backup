@@ -153,11 +153,15 @@ class HttpHandler
         $path = isset($params['firestorePath']) && is_string($params['firestorePath']) ? $params['firestorePath'] : '';
         $enabled = isset($params['enabled']) && ($params['enabled'] === '1' || $params['enabled'] === 'true');
 
-        $id = Uuid::uuid4()->toString();
-        $config = new BackupConfig($id, $name, $path, $enabled, Carbon::now(), Carbon::now());
-        $this->configRepository->saveBackupConfig($config);
+        try {
+            $id = Uuid::uuid4()->toString();
+            $config = new BackupConfig($id, $name, $path, $enabled, Carbon::now(), Carbon::now());
+            $this->configRepository->saveBackupConfig($config);
 
-        return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を作成しました。");
+            return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を作成しました。");
+        } catch (\InvalidArgumentException $e) {
+            return $this->redirectWithAlert($basePath, 'error', $e->getMessage());
+        }
     }
 
     private function handleUpdateBackupConfig(ServerRequestInterface $request, string $basePath): string
@@ -168,13 +172,17 @@ class HttpHandler
         $path = isset($params['firestorePath']) && is_string($params['firestorePath']) ? $params['firestorePath'] : '';
         $enabled = isset($params['enabled']) && ($params['enabled'] === '1' || $params['enabled'] === 'true');
 
-        $existing = $this->configRepository->getBackupConfig($id);
-        $createdAt = $existing ? $existing->getCreatedAt() : Carbon::now();
+        try {
+            $existing = $this->configRepository->getBackupConfig($id);
+            $createdAt = $existing ? $existing->getCreatedAt() : Carbon::now();
 
-        $config = new BackupConfig($id, $name, $path, $enabled, $createdAt, Carbon::now());
-        $this->configRepository->saveBackupConfig($config);
+            $config = new BackupConfig($id, $name, $path, $enabled, $createdAt, Carbon::now());
+            $this->configRepository->saveBackupConfig($config);
 
-        return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を更新しました。");
+            return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を更新しました。");
+        } catch (\InvalidArgumentException $e) {
+            return $this->redirectWithAlert($basePath, 'error', $e->getMessage());
+        }
     }
 
     private function handleDeleteBackupConfig(ServerRequestInterface $request, string $basePath): string

@@ -11,7 +11,7 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 - **データベース**: Google Cloud Firestore (Native Mode)
 - **ロギング**: Monolog による標準出力（Cloud Logging）ログ出力
 - **機能概要**:
-  - **CloudEvent 起動 (`main_event`)**: 設定された複数の Firestore パスからデータをエクスポートし、GCS 共通設定（`{ベースパス}/{YYYYMMDD}/{configId}_{configName}.json`）へ保存します。
+  - **CloudEvent 起動 (`main_event`)**: 設定された複数の Firestore パスからデータをエクスポートし、GCS 共通設定（`{ベースパス}/{YYYYMMDD}/{configName}_{configId}.json`）へ保存します。
   - **HTTP 起動 (`main_http`)**: バックアップ設定の CRUD 管理画面を表示。Firestore パスの入力支援機能、GCS 共通設定編集、手動バックアップ実行（一括および個別）を提供します。
 - **アーキテクチャ**:
   - `index.php`: Google Cloud Functions のエントリポイント
