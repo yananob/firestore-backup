@@ -118,9 +118,12 @@
                                     <h3 class="text-sm font-bold text-gray-200">{{ $config->getName() }}</h3>
                                     <span class="text-[10px] bg-gray-800 text-gray-400 border border-gray-700 px-1.5 py-0.5 rounded font-mono">{{ $config->getId() }}</span>
                                 </div>
-                                <div class="text-xs text-gray-400 font-mono flex items-center">
-                                    <span class="text-gray-500 mr-1.5">Path:</span>
+                                <div class="text-xs text-gray-400 font-mono flex items-center flex-wrap gap-1.5">
+                                     <span class="text-gray-500 mr-1">Path:</span>
                                     <span class="bg-gray-950 border border-gray-800 px-1.5 py-0.5 rounded text-indigo-400 font-semibold">{{ $config->getFirestorePath() }}</span>
+                                     @if ($config->isRootCollection())
+                                         <span class="text-[10px] bg-amber-950 border border-amber-800 text-amber-300 px-1.5 py-0.5 rounded font-sans" title="ルートコレクションはエクスポート対象外です">ルートパス（要修正）</span>
+                                     @endif
                                 </div>
                                 <div class="text-[11px] text-gray-500 flex space-x-4">
                                     <span>作成: {{ $config->getCreatedAt() ? $config->getCreatedAt()->format('Y/m/d H:i') : '-' }}</span>

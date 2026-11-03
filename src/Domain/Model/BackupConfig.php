@@ -40,9 +40,6 @@ class BackupConfig
         if ($cleanPath === '') {
             throw new InvalidArgumentException('Firestoreパスは必須です。');
         }
-        if (!str_contains($cleanPath, '/')) {
-            throw new InvalidArgumentException('ルートコレクションは指定できません。ドキュメントまたはサブコレクション以下のパス（例: users/u1 または users/u1/orders）を指定してください。');
-        }
 
         $this->id = $cleanId;
         $this->name = $cleanName;
@@ -80,6 +77,14 @@ class BackupConfig
     public function getUpdatedAt(): Carbon
     {
         return $this->updatedAt;
+    }
+
+    /**
+     * 指定されたパスがルートコレクションであるか（スラッシュを含まないか）を判定します。
+     */
+    public function isRootCollection(): bool
+    {
+        return !str_contains($this->firestorePath, '/');
     }
 
     /**
