@@ -13,8 +13,10 @@ use Google\Cloud\Firestore\CollectionReference;
 use Google\Cloud\Firestore\DocumentReference;
 use Google\Cloud\Firestore\DocumentSnapshot;
 use Google\Cloud\Firestore\FirestoreClient;
+use Monolog\Handler\StreamHandler;
+use Monolog\Level;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use RuntimeException;
 use Throwable;
 
@@ -37,9 +39,16 @@ class BackupService
         $this->configRepository = $configRepository;
         $this->storageService = $storageService;
         $this->firestoreClient = $firestoreClient ?? new FirestoreClient([
+            'projectId' => AppConfig::getFirestoreProjectId(),
             'transport' => 'rest',
         ]);
-        $this->logger = $logger ?? new NullLogger();
+        if ($logger === null) {
+            $monolog = new Logger('backup_service_logger');
+            $monolog->pushHandler(new StreamHandler('php://stdout', Level::Info));
+            $this->logger = $monolog;
+        } else {
+            $this->logger = $logger;
+        }
     }
 
     /**
@@ -72,6 +81,7 @@ class BackupService
 
         try {
             $data = $this->fetchDataFromPath($config->getFirestorePath());
+
             $jsonContent = json_encode([
                 'configId' => $config->getId(),
                 'configName' => $config->getName(),
@@ -165,20 +175,18 @@ class BackupService
 
         // 奇数個 = コレクション (例: "users", "groups/g1/members")
         if ($count % 2 === 1) {
+            $this->logger->info("Fetching collection data for path: {$cleanPath}");
             $colRef = $this->firestoreClient->collection($cleanPath);
             return $this->fetchCollectionData($colRef);
         }
 
         // 偶数個 = 単一ドキュメント (例: "users/u1")
+        $this->logger->info("Fetching document data for path: {$cleanPath}");
         $docRef = $this->firestoreClient->document($cleanPath);
         $snapshot = $docRef->snapshot();
-        if ($snapshot->exists()) {
-            return [
+        return [
                 $snapshot->id() => $this->fetchDocumentData($docRef, $snapshot),
             ];
-        }
-
-        return [];
     }
 
     /**
@@ -188,12 +196,12 @@ class BackupService
      */
     public function fetchCollectionData(CollectionReference $colRef): array
     {
+        $this->logger->info("Fetching collection data for reference: " . $colRef->id());
         $documents = $colRef->documents();
+        $this->logger->info("Found " . iterator_count($documents) . " documents in collection: " . $colRef->id());
         $data = [];
         foreach ($documents as $doc) {
-            if ($doc->exists()) {
-                $data[$doc->id()] = $this->fetchDocumentData($doc->reference(), $doc);
-            }
+            $data[$doc->id()] = $this->fetchDocumentData($doc->reference(), $doc);
         }
         return $data;
     }
