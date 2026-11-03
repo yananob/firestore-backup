@@ -81,7 +81,7 @@ class BackupService
 
         try {
             $data = $this->fetchDataFromPath($config->getFirestorePath());
-            $this->logger->debug(var_export($data, true));
+            $this->logger->info(var_export($data, true));
 
             $jsonContent = json_encode([
                 'configId' => $config->getId(),
@@ -206,6 +206,7 @@ class BackupService
                 $data[$doc->id()] = $this->fetchDocumentData($doc->reference(), $doc);
             }
         }
+        $this->logger->info("Fetched collection :" . var_export($data, true));
         return $data;
     }
 
@@ -232,6 +233,7 @@ class BackupService
             $docData['_collections'] = $collections;
         }
 
+        $this->logger->info("Fetched document data for {$docRef->id()}: " . var_export($docData, true));
         return $docData;
     }
 }
