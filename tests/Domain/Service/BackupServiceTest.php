@@ -30,7 +30,7 @@ class BackupServiceTest extends TestCase
 
     public function testBackupSingleConfigUploadsToGcs(): void
     {
-        $backupConfig = new BackupConfig('c1', 'users-data', 'users');
+        $backupConfig = new BackupConfig('c1', 'users-data', 'users/u1');
         $commonConfig = new CommonConfig('my-test-bucket', 'backups');
 
         /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
@@ -72,25 +72,25 @@ class BackupServiceTest extends TestCase
 
         $this->assertTrue($result['success']);
         $this->assertSame(2, $result['count']);
-        $this->assertSame('gs://my-test-bucket/backups/20261101/c1_users-data.json', $result['path']);
+        $this->assertSame('gs://my-test-bucket/backups/20261101/users-data_c1.json', $result['path']);
 
         $this->assertCount(1, $uploaded);
         $this->assertSame('my-test-bucket', $uploaded[0]['bucket']);
-        $this->assertSame('backups/20261101/c1_users-data.json', $uploaded[0]['path']);
+        $this->assertSame('backups/20261101/users-data_c1.json', $uploaded[0]['path']);
 
         $decoded = json_decode($uploaded[0]['content'], true);
         $this->assertIsArray($decoded);
         $this->assertSame('c1', $decoded['configId']);
         $this->assertSame('users-data', $decoded['configName']);
-        $this->assertSame('users', $decoded['firestorePath']);
+        $this->assertSame('users/u1', $decoded['firestorePath']);
         $this->assertSame(2, $decoded['itemCount']);
         $this->assertArrayHasKey('u1', $decoded['data']);
     }
 
     public function testBackupAllExecutesEnabledConfigs(): void
     {
-        $c1 = new BackupConfig('c1', 'config1', 'users', true);
-        $c2 = new BackupConfig('c2', 'config2', 'logs', false); // disabled
+        $c1 = new BackupConfig('c1', 'config1', 'users/u1', true);
+        $c2 = new BackupConfig('c2', 'config2', 'logs/l1', false); // disabled
 
         /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
         $repoMock = $this->createMock(ConfigRepositoryInterface::class);

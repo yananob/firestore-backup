@@ -40,6 +40,9 @@ class BackupConfig
         if ($cleanPath === '') {
             throw new InvalidArgumentException('Firestoreパスは必須です。');
         }
+        if (!str_contains($cleanPath, '/')) {
+            throw new InvalidArgumentException('ルートコレクションは指定できません。ドキュメントまたはサブコレクション以下のパス（例: users/u1 または users/u1/orders）を指定してください。');
+        }
 
         $this->id = $cleanId;
         $this->name = $cleanName;

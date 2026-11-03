@@ -60,6 +60,13 @@ class BackupConfigTest extends TestCase
     public function testBackupConfigValidation(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        new BackupConfig('', 'name', 'path');
+        new BackupConfig('', 'name', 'path/doc');
+    }
+
+    public function testBackupConfigRejectsRootCollection(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('ルートコレクションは指定できません');
+        new BackupConfig('cfg-1', 'ルート指定', 'users');
     }
 }
