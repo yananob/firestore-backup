@@ -90,5 +90,87 @@ class HttpHandlerTest extends TestCase
         $response = $handler->handle($request);
         $this->assertStringContainsString('msg_type=success', $response);
         $this->assertStringContainsString(urlencode('GCS共通設定を保存しました。'), $response);
+        // リダイレクトレスポンスにダークモードスタイルが含まれること
+        $this->assertStringContainsString('background-color: #030712;', $response);
+    }
+
+    public function testHandleCreateBackupConfigRejectsRootCollection(): void
+    {
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        $repoMock->expects($this->never())->method('saveBackupConfig');
+
+        /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
+        $backupServiceMock = $this->createMock(BackupService::class);
+        /** @var FirestorePathService&\PHPUnit\Framework\MockObject\MockObject $pathServiceMock */
+        $pathServiceMock = $this->createMock(FirestorePathService::class);
+        /** @var BladeOne&\PHPUnit\Framework\MockObject\MockObject $bladeMock */
+        $bladeMock = $this->createMock(BladeOne::class);
+
+        $handler = new HttpHandler($repoMock, $backupServiceMock, $pathServiceMock, $bladeMock);
+        $request = (new ServerRequest('POST', '/settings/configs'))->withParsedBody([
+            'name' => 'ルートコレクション設定',
+            'firestorePath' => 'users',
+            'enabled' => '1',
+        ]);
+
+        $response = $handler->handle($request);
+        $this->assertStringContainsString('msg_type=error', $response);
+        $this->assertStringContainsString(urlencode('ルートコレクションは指定できません。'), $response);
+    }
+
+    public function testHandleUpdateBackupConfigRejectsRootCollection(): void
+    {
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        $repoMock->expects($this->never())->method('saveBackupConfig');
+
+        /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
+        $backupServiceMock = $this->createMock(BackupService::class);
+        /** @var FirestorePathService&\PHPUnit\Framework\MockObject\MockObject $pathServiceMock */
+        $pathServiceMock = $this->createMock(FirestorePathService::class);
+        /** @var BladeOne&\PHPUnit\Framework\MockObject\MockObject $bladeMock */
+        $bladeMock = $this->createMock(BladeOne::class);
+
+        $handler = new HttpHandler($repoMock, $backupServiceMock, $pathServiceMock, $bladeMock);
+        $request = (new ServerRequest('POST', '/settings/configs/update'))->withParsedBody([
+            'id' => 'cfg-1',
+            'name' => 'ルートコレクション更新',
+            'firestorePath' => 'groups',
+            'enabled' => '1',
+        ]);
+
+        $response = $handler->handle($request);
+        $this->assertStringContainsString('msg_type=error', $response);
+        $this->assertStringContainsString(urlencode('ルートコレクションは指定できません。'), $response);
+    }
+
+    public function testHandleGetIndexWithExistingRootConfigRendersSuccessfully(): void
+    {
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        $repoMock->method('getCommonConfig')->willReturn(new CommonConfig('test-bucket', 'backups'));
+        // すでにDBにルートパス設定が存在していてもエラーにならず描画されること
+        $repoMock->method('getBackupConfigs')->willReturn([
+            'c1' => new BackupConfig('c1', 'ルート設定', 'users'),
+        ]);
+
+        /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
+        $backupServiceMock = $this->createMock(BackupService::class);
+        /** @var FirestorePathService&\PHPUnit\Framework\MockObject\MockObject $pathServiceMock */
+        $pathServiceMock = $this->createMock(FirestorePathService::class);
+
+        /** @var BladeOne&\PHPUnit\Framework\MockObject\MockObject $bladeMock */
+        $bladeMock = $this->createMock(BladeOne::class);
+        $bladeMock->expects($this->once())->method('run')->with('index', $this->callback(function (array $data): bool {
+            $configs = $data['configs'];
+            return isset($configs['c1']) && $configs['c1']->isRootCollection();
+        }))->willReturn('<html>rendered</html>');
+
+        $handler = new HttpHandler($repoMock, $backupServiceMock, $pathServiceMock, $bladeMock);
+        $request = new ServerRequest('GET', '/');
+
+        $response = $handler->handle($request);
+        $this->assertSame('<html>rendered</html>', $response);
     }
 }
