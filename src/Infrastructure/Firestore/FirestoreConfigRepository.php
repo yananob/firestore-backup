@@ -71,6 +71,10 @@ class FirestoreConfigRepository implements ConfigRepositoryInterface
             }
         }
 
+        uasort($configs, static function (BackupConfig $a, BackupConfig $b): int {
+            return strnatcasecmp($a->getName(), $b->getName());
+        });
+
         return $configs;
     }
 

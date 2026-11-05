@@ -154,8 +154,13 @@ class HttpHandler
         $enabled = isset($params['enabled']) && ($params['enabled'] === '1' || $params['enabled'] === 'true');
 
         try {
+            $cleanPath = trim(trim($path), '/');
+            if (!str_contains($cleanPath, '/')) {
+                throw new \InvalidArgumentException('ルートコレクションは指定できません。ドキュメントまたはサブコレクション以下のパス（例: users/u1 または users/u1/orders）を指定してください。');
+            }
+
             $id = Uuid::uuid4()->toString();
-            $config = new BackupConfig($id, $name, $path, $enabled, Carbon::now(), Carbon::now());
+            $config = new BackupConfig($id, $name, $cleanPath, $enabled, Carbon::now(), Carbon::now());
             $this->configRepository->saveBackupConfig($config);
 
             return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を作成しました。");
@@ -173,10 +178,15 @@ class HttpHandler
         $enabled = isset($params['enabled']) && ($params['enabled'] === '1' || $params['enabled'] === 'true');
 
         try {
+            $cleanPath = trim(trim($path), '/');
+            if (!str_contains($cleanPath, '/')) {
+                throw new \InvalidArgumentException('ルートコレクションは指定できません。ドキュメントまたはサブコレクション以下のパス（例: users/u1 または users/u1/orders）を指定してください。');
+            }
+
             $existing = $this->configRepository->getBackupConfig($id);
             $createdAt = $existing ? $existing->getCreatedAt() : Carbon::now();
 
-            $config = new BackupConfig($id, $name, $path, $enabled, $createdAt, Carbon::now());
+            $config = new BackupConfig($id, $name, $cleanPath, $enabled, $createdAt, Carbon::now());
             $this->configRepository->saveBackupConfig($config);
 
             return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を更新しました。");
@@ -271,7 +281,7 @@ class HttpHandler
         ]);
 
         return sprintf(
-            '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=%s"></head><body><script>window.location.href=%s;</script></body></html>',
+            '<!DOCTYPE html><html style="background-color: #030712;"><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url=%s"><style>body{background-color:#030712;color:#f3f4f6;margin:0;}</style></head><body style="background-color: #030712;"><script>window.location.href=%s;</script></body></html>',
             htmlspecialchars($url, ENT_QUOTES, 'UTF-8'),
             json_encode($url)
         );

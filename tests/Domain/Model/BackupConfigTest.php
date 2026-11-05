@@ -63,10 +63,15 @@ class BackupConfigTest extends TestCase
         new BackupConfig('', 'name', 'path/doc');
     }
 
-    public function testBackupConfigRejectsRootCollection(): void
+    public function testBackupConfigAllowsExistingRootCollection(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('ルートコレクションは指定できません');
-        new BackupConfig('cfg-1', 'ルート指定', 'users');
+        // DBに既存のルートパス設定が存在しても例外が発生せず、isRootCollection が true を返すこと
+        $config = new BackupConfig('cfg-root', 'ルート指定', 'users');
+        $this->assertSame('users', $config->getFirestorePath());
+        $this->assertTrue($config->isRootCollection());
+
+        // サブコレクションまたはドキュメントの場合は false
+        $subConfig = new BackupConfig('cfg-sub', 'サブ指定', 'users/u1');
+        $this->assertFalse($subConfig->isRootCollection());
     }
 }
