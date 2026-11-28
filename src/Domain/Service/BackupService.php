@@ -133,18 +133,30 @@ class BackupService
 
         $configs = $this->configRepository->getBackupConfigs();
         $results = [];
+        $notificationResults = [];
         $successCount = 0;
         $failedCount = 0;
 
         foreach ($configs as $config) {
             if (!$config->isEnabled()) {
                 $this->logger->info("Skipping disabled config '{$config->getName()}' ({$config->getId()})");
+                $notificationResults[] = [
+                    'configName' => $config->getName(),
+                    'success' => false,
+                    'path' => '',
+                    'count' => 0,
+                    'sizeBytes' => 0,
+                    'skipped' => true,
+                ];
                 continue;
             }
 
             $res = $this->backupSingleConfig($config, $commonConfig, $date);
             $results[$config->getId()] = $res;
-            $this->notifyResult($config, $res);
+            $notificationResults[] = [
+                'configName' => $config->getName(),
+                ...$res,
+            ];
 
             if ($res['success']) {
                 $successCount++;
@@ -152,6 +164,8 @@ class BackupService
                 $failedCount++;
             }
         }
+
+        $this->notifyResults($commonConfig, $notificationResults);
 
         return [
             'total' => count($results),
@@ -162,20 +176,20 @@ class BackupService
     }
 
     /**
-     * 指定したバックアップ結果を設定済みのLINE送信先へ通知します。
+     * バックアップ結果を共通設定のLINE送信先へ一括通知します。
      *
-     * @param array{success: bool, path: string, count: int, sizeBytes: int, error?: string} $result
+     * @param array<int, array{configName: string, success: bool, path: string, count: int, sizeBytes: int, skipped?: bool, error?: string}> $results
      */
-    public function notifyResult(BackupConfig $config, array $result): void
+    public function notifyResults(CommonConfig $config, array $results): void
     {
         if ($config->getLineTargetKey() === null) {
             return;
         }
 
         try {
-            $this->lineNotificationService->notify($config, $result);
+            $this->lineNotificationService->notify($config, $results);
         } catch (Throwable $e) {
-            $this->logger->error("Failed to send LINE report for '{$config->getName()}': " . $e->getMessage(), [
+            $this->logger->error('Failed to send LINE backup report: ' . $e->getMessage(), [
                 'exception' => $e,
             ]);
         }

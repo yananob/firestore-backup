@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Notification;
 
 use App\AppConfig;
-use App\Domain\Model\BackupConfig;
+use App\Domain\Model\CommonConfig;
 use App\Domain\Service\LineNotificationServiceInterface;
 use LINE\Clients\MessagingApi\Api\MessagingApiApi;
 use LINE\Clients\MessagingApi\Model\PushMessageRequest;
@@ -15,34 +15,65 @@ use LINE\Clients\MessagingApi\Configuration;
 class LineNotificationService implements LineNotificationServiceInterface
 {
     /**
-     * @param array{success: bool, path: string, count: int, sizeBytes: int, error?: string} $result
+     * @param array<int, array{configName: string, success: bool, path: string, count: int, sizeBytes: int, skipped?: bool, error?: string}> $results
      */
-    public function notify(BackupConfig $config, array $result): void
+    public function notify(CommonConfig $config, array $results): void
     {
         $key = $config->getLineTargetKey();
         if ($key === null) {
             return;
         }
 
-        $token = AppConfig::getLineConfig()['tokens'][$key] ?? null;
-        $targetId = AppConfig::getLineConfig()['target_ids'][$key] ?? null;
+        $lineConfigData = AppConfig::getLineConfig();
+        $token = $lineConfigData['tokens'][$key] ?? null;
+        $targetId = $lineConfigData['target_ids'][$key] ?? null;
         if ($token === null || $token === '' || $targetId === null || $targetId === '') {
             return;
         }
 
-        $message = $result['success']
-            ? sprintf(
-                "Firestoreバックアップ完了\n設定: %s\nデータ数: %d件\n容量: %s\n保存先: %s",
-                $config->getName(),
-                $result['count'],
-                self::formatBytes($result['sizeBytes']),
-                $result['path']
-            )
-            : sprintf(
-                "Firestoreバックアップ失敗\n設定: %s\nエラー: %s",
-                $config->getName(),
-                $result['error'] ?? '不明なエラー'
-            );
+        $successCount = 0;
+        $failedCount = 0;
+        $skippedCount = 0;
+        $itemCount = 0;
+        $sizeBytes = 0;
+        $lines = [];
+
+        foreach ($results as $result) {
+            if ($result['skipped'] ?? false) {
+                $skippedCount++;
+                $lines[] = sprintf('- %s: スキップ', $result['configName']);
+                continue;
+            }
+
+            if ($result['success']) {
+                $successCount++;
+                $itemCount += $result['count'];
+                $sizeBytes += $result['sizeBytes'];
+                $lines[] = sprintf(
+                    '- %s: 成功、%d件、%s',
+                    $result['configName'],
+                    $result['count'],
+                    self::formatBytes($result['sizeBytes'])
+                );
+            } else {
+                $failedCount++;
+                $lines[] = sprintf(
+                    '- %s: 失敗（%s）',
+                    $result['configName'],
+                    $result['error'] ?? '不明なエラー'
+                );
+            }
+        }
+
+        $message = sprintf(
+            "Firestoreバックアップレポート\n成功: %d / 失敗: %d / スキップ: %d\n合計データ数: %d件\n合計容量: %s\n\n%s",
+            $successCount,
+            $failedCount,
+            $skippedCount,
+            $itemCount,
+            self::formatBytes($sizeBytes),
+            $lines === [] ? 'バックアップ対象はありません。' : implode("\n", $lines)
+        );
 
         $lineConfig = new Configuration();
         $lineConfig->setAccessToken($token);

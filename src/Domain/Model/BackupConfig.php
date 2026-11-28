@@ -16,7 +16,6 @@ class BackupConfig
     private string $name;
     private string $firestorePath;
     private bool $enabled;
-    private ?string $lineTargetKey;
     private Carbon $createdAt;
     private Carbon $updatedAt;
 
@@ -26,8 +25,7 @@ class BackupConfig
         string $firestorePath,
         bool $enabled = true,
         ?Carbon $createdAt = null,
-        ?Carbon $updatedAt = null,
-        ?string $lineTargetKey = null
+        ?Carbon $updatedAt = null
     ) {
         $cleanId = trim($id);
         $cleanName = trim($name);
@@ -47,7 +45,6 @@ class BackupConfig
         $this->name = $cleanName;
         $this->firestorePath = $cleanPath;
         $this->enabled = $enabled;
-        $this->lineTargetKey = $lineTargetKey !== null && trim($lineTargetKey) !== '' ? trim($lineTargetKey) : null;
         $this->createdAt = $createdAt ?? Carbon::now();
         $this->updatedAt = $updatedAt ?? Carbon::now();
     }
@@ -72,11 +69,6 @@ class BackupConfig
         return $this->enabled;
     }
 
-    public function getLineTargetKey(): ?string
-    {
-        return $this->lineTargetKey;
-    }
-
     public function getCreatedAt(): Carbon
     {
         return $this->createdAt;
@@ -96,7 +88,7 @@ class BackupConfig
     }
 
     /**
-     * @return array{id: string, name: string, firestorePath: string, enabled: bool, lineTargetKey: string|null, createdAt: string, updatedAt: string}
+     * @return array{id: string, name: string, firestorePath: string, enabled: bool, createdAt: string, updatedAt: string}
      */
     public function toArray(): array
     {
@@ -105,7 +97,6 @@ class BackupConfig
             'name' => $this->name,
             'firestorePath' => $this->firestorePath,
             'enabled' => $this->enabled,
-            'lineTargetKey' => $this->lineTargetKey,
             'createdAt' => $this->createdAt->toIso8601String(),
             'updatedAt' => $this->updatedAt->toIso8601String(),
         ];
@@ -120,7 +111,6 @@ class BackupConfig
         $name = isset($data['name']) && is_string($data['name']) ? $data['name'] : '';
         $firestorePath = isset($data['firestorePath']) && is_string($data['firestorePath']) ? $data['firestorePath'] : '';
         $enabled = isset($data['enabled']) ? (bool) $data['enabled'] : true;
-        $lineTargetKey = isset($data['lineTargetKey']) && is_string($data['lineTargetKey']) ? $data['lineTargetKey'] : null;
 
         $createdAt = null;
         if (isset($data['createdAt']) && is_string($data['createdAt'])) {
@@ -131,6 +121,6 @@ class BackupConfig
             $updatedAt = Carbon::parse($data['updatedAt']);
         }
 
-        return new self($id, $name, $firestorePath, $enabled, $createdAt, $updatedAt, $lineTargetKey);
+        return new self($id, $name, $firestorePath, $enabled, $createdAt, $updatedAt);
     }
 }

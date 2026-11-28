@@ -28,6 +28,16 @@
                     <input type="text" name="basePath" value="{{ $commonConfig ? $commonConfig->getBasePath() : '' }}" placeholder="firestore-backups/daily" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 placeholder-gray-500 shadow-sm border px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono">
                     <p class="text-[11px] text-gray-500 mt-1">保存先プレフィックス。末尾に「/YYYYMMDD」が付与されます。</p>
                 </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-300 mb-1">LINE 通知先（任意）</label>
+                    <select name="lineTargetKey" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 shadow-sm border px-3 py-2">
+                        <option value="">通知しない</option>
+                        @foreach ($lineTargetOptions as $key => $label)
+                            <option value="{{ $key }}" {{ $commonConfig && $commonConfig->getLineTargetKey() === $key ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-gray-500 mt-1">一括バックアップの全設定結果を一度に通知します。</p>
+                </div>
                 <div class="pt-2 flex justify-end">
                     <button type="submit" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white text-xs font-medium rounded shadow transition cursor-pointer">
                         共通設定を保存
@@ -78,17 +88,6 @@
                 <div class="flex items-center">
                     <input type="checkbox" id="enabledNew" name="enabled" value="1" checked class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-700 bg-gray-950 rounded">
                     <label for="enabledNew" class="ml-2 block text-xs text-gray-300">このバックアップを有効にする</label>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-gray-300 mb-1">LINE 通知先（任意）</label>
-                    <select name="lineTargetKey" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 shadow-sm border px-3 py-2">
-                        <option value="">通知しない</option>
-                        @foreach ($lineTargetOptions as $key => $label)
-                            <option value="{{ $key }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <p class="text-[11px] text-gray-500 mt-1">バックアップ完了時にデータ数と容量を送信します。</p>
                 </div>
 
                 <div class="pt-2 flex justify-end">
@@ -209,16 +208,6 @@
                 <label for="editConfigEnabled" class="ml-2 block text-xs text-gray-300">このバックアップを有効にする</label>
             </div>
 
-            <div>
-                <label class="block text-xs font-medium text-gray-300 mb-1">LINE 通知先（任意）</label>
-                <select id="editLineTargetKey" name="lineTargetKey" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 shadow-sm border px-3 py-2">
-                    <option value="">通知しない</option>
-                    @foreach ($lineTargetOptions as $key => $label)
-                        <option value="{{ $key }}">{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-
             <div class="pt-3 flex justify-end space-x-2 border-t border-gray-800">
                 <button type="button" onclick="closeEditModal()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 text-xs font-medium rounded transition cursor-pointer">
                     キャンセル
@@ -239,7 +228,6 @@
         document.getElementById('editConfigName').value = config.name;
         document.getElementById('editFirestorePath').value = config.firestorePath;
         document.getElementById('editConfigEnabled').checked = !!config.enabled;
-        document.getElementById('editLineTargetKey').value = config.lineTargetKey || '';
         document.getElementById('editModal').classList.remove('hidden');
     }
 

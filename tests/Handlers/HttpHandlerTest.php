@@ -72,7 +72,8 @@ class HttpHandlerTest extends TestCase
     {
         /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
         $repoMock = $this->createMock(ConfigRepositoryInterface::class);
-        $repoMock->expects($this->once())->method('saveCommonConfig');
+        $repoMock->expects($this->once())->method('saveCommonConfig')
+            ->with($this->callback(static fn (CommonConfig $config): bool => $config->getLineTargetKey() === 'oml'));
 
         /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
         $backupServiceMock = $this->createMock(BackupService::class);
@@ -85,6 +86,7 @@ class HttpHandlerTest extends TestCase
         $request = (new ServerRequest('POST', '/settings/common'))->withParsedBody([
             'bucket' => 'my-bucket',
             'basePath' => 'backups',
+            'lineTargetKey' => 'oml',
         ]);
 
         $response = $handler->handle($request);

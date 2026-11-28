@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Service;
 
-use App\Domain\Model\BackupConfig;
+use App\Domain\Model\CommonConfig;
 
 interface LineNotificationServiceInterface
 {
     /**
      * バックアップ結果をLINEへ通知します。
      *
-     * @param array{success: bool, path: string, count: int, sizeBytes: int, error?: string} $result
+     * @param array<int, array{configName: string, success: bool, path: string, count: int, sizeBytes: int, skipped?: bool, error?: string}> $results
      */
-    public function notify(BackupConfig $config, array $result): void;
+    public function notify(CommonConfig $config, array $results): void;
 }

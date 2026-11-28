@@ -14,17 +14,20 @@ class BackupConfigTest extends TestCase
 {
     public function testCommonConfigValid(): void
     {
-        $config = new CommonConfig('my-bucket', '/backups/path/');
+        $config = new CommonConfig('my-bucket', '/backups/path/', 'oml');
         $this->assertSame('my-bucket', $config->getBucket());
         $this->assertSame('backups/path', $config->getBasePath());
+        $this->assertSame('oml', $config->getLineTargetKey());
 
         $array = $config->toArray();
         $this->assertSame('my-bucket', $array['bucket']);
         $this->assertSame('backups/path', $array['basePath']);
+        $this->assertSame('oml', $array['lineTargetKey']);
 
         $restored = CommonConfig::fromArray($array);
         $this->assertSame('my-bucket', $restored->getBucket());
         $this->assertSame('backups/path', $restored->getBasePath());
+        $this->assertSame('oml', $restored->getLineTargetKey());
     }
 
     public function testCommonConfigThrowsOnEmptyBucket(): void
@@ -36,13 +39,12 @@ class BackupConfigTest extends TestCase
     public function testBackupConfigValid(): void
     {
         $now = Carbon::parse('2026-11-01 12:00:00');
-        $config = new BackupConfig('cfg-1', 'ユーザー情報', '/users/collection/', true, $now, $now, 'oml');
+        $config = new BackupConfig('cfg-1', 'ユーザー情報', '/users/collection/', true, $now, $now);
 
         $this->assertSame('cfg-1', $config->getId());
         $this->assertSame('ユーザー情報', $config->getName());
         $this->assertSame('users/collection', $config->getFirestorePath());
         $this->assertTrue($config->isEnabled());
-        $this->assertSame('oml', $config->getLineTargetKey());
         $this->assertSame($now, $config->getCreatedAt());
         $this->assertSame($now, $config->getUpdatedAt());
 
@@ -56,7 +58,6 @@ class BackupConfigTest extends TestCase
         $this->assertSame('ユーザー情報', $restored->getName());
         $this->assertSame('users/collection', $restored->getFirestorePath());
         $this->assertTrue($restored->isEnabled());
-        $this->assertSame('oml', $restored->getLineTargetKey());
     }
 
     public function testBackupConfigValidation(): void
