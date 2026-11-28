@@ -81,7 +81,7 @@ $firestore = FirestoreClientFactory::create();
 - **環境の識別**:
   - テスト環境では、本番環境と区別しやすくするため、画面上部に現在のベースパスとリクエストパスをオーバーレイで表示します。
 - **デプロイとシークレット**:
-  デプロイは GitHub Actions (`.github/workflows/deploy-*.yaml`) で自動化します。機密性の高い環境変数は、GitHub Secrets に保存され、デプロイ時に Cloud Functions の環境変数として設定されます。
+  デプロイは GitHub Actions (`.github/workflows/`) で自動化します。LINE送信設定は Google Cloud Secret Manager に保存し、デプロイ時に Cloud Functions の環境変数として設定します。
 - 処理状況が分かるように、適宜ログを出力する。ログ出力には monolog を使う。
 
 ---

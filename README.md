@@ -58,6 +58,8 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 
 `LINE_TOKENS_N_TARGETS` の `tokens` と `target_ids` にそれぞれキーを設定します。管理画面のGCS共通設定でトークンと通知先を別々に一つずつ選択すると、一括バックアップの結果がまとめて通知されます。既存の通知先設定は、トークンを選び直すまで従来どおり同じキーのトークンを使用します。
 
+デプロイと `tests/run_tests.sh` では、Google Cloud Secret Manager の `LINE_TOKENS_N_TARGETS` の最新バージョンを使用します。対象プロジェクトにシークレットを作成し、デプロイ・テスト用および関数実行用のサービスアカウントにアクセス権を付与してください。本番のHTTP・イベント関数とテストのHTTP関数に設定されます。
+
 ---
 
 ## ローカル開発とテスト手順
