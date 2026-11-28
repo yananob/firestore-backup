@@ -130,6 +130,7 @@ class HttpHandler
             'requestPath' => $requestPath,
             'commonConfig' => $commonConfig,
             'configs' => $configs,
+            'lineTargetOptions' => AppConfig::getLineTargetOptions(),
             'message' => $message,
         ]);
     }
@@ -152,6 +153,7 @@ class HttpHandler
         $name = isset($params['name']) && is_string($params['name']) ? $params['name'] : '';
         $path = isset($params['firestorePath']) && is_string($params['firestorePath']) ? $params['firestorePath'] : '';
         $enabled = isset($params['enabled']) && ($params['enabled'] === '1' || $params['enabled'] === 'true');
+        $lineTargetKey = isset($params['lineTargetKey']) && is_string($params['lineTargetKey']) ? $params['lineTargetKey'] : null;
 
         try {
             $cleanPath = trim(trim($path), '/');
@@ -160,7 +162,7 @@ class HttpHandler
             }
 
             $id = Uuid::uuid4()->toString();
-            $config = new BackupConfig($id, $name, $cleanPath, $enabled, Carbon::now(), Carbon::now());
+            $config = new BackupConfig($id, $name, $cleanPath, $enabled, Carbon::now(), Carbon::now(), $lineTargetKey);
             $this->configRepository->saveBackupConfig($config);
 
             return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を作成しました。");
@@ -176,6 +178,7 @@ class HttpHandler
         $name = isset($params['name']) && is_string($params['name']) ? $params['name'] : '';
         $path = isset($params['firestorePath']) && is_string($params['firestorePath']) ? $params['firestorePath'] : '';
         $enabled = isset($params['enabled']) && ($params['enabled'] === '1' || $params['enabled'] === 'true');
+        $lineTargetKey = isset($params['lineTargetKey']) && is_string($params['lineTargetKey']) ? $params['lineTargetKey'] : null;
 
         try {
             $cleanPath = trim(trim($path), '/');
@@ -186,7 +189,7 @@ class HttpHandler
             $existing = $this->configRepository->getBackupConfig($id);
             $createdAt = $existing ? $existing->getCreatedAt() : Carbon::now();
 
-            $config = new BackupConfig($id, $name, $cleanPath, $enabled, $createdAt, Carbon::now());
+            $config = new BackupConfig($id, $name, $cleanPath, $enabled, $createdAt, Carbon::now(), $lineTargetKey);
             $this->configRepository->saveBackupConfig($config);
 
             return $this->redirectWithAlert($basePath, 'success', "バックアップ設定「{$name}」を更新しました。");
@@ -221,8 +224,9 @@ class HttpHandler
             }
 
             $result = $this->backupService->backupSingleConfig($config, $commonConfig);
+            $this->backupService->notifyResult($config, $result);
             if ($result['success']) {
-                $msg = sprintf("バックアップ完了: %s (%d 件のデータをエクスポート -> %s)", $config->getName(), $result['count'], $result['path']);
+                $msg = sprintf("バックアップ完了: %s (%d 件、%d bytes -> %s)", $config->getName(), $result['count'], $result['sizeBytes'], $result['path']);
                 return $this->redirectWithAlert($basePath, 'success', $msg);
             }
 

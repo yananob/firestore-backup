@@ -13,6 +13,7 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 - **機能概要**:
   - **CloudEvent 起動 (`main_event`)**: 設定された複数の Firestore パスからデータをエクスポートし、GCS 共通設定（`{ベースパス}/{YYYYMMDD}/{configName}_{configId}.json`）へ保存します。
   - **HTTP 起動 (`main_http`)**: バックアップ設定の CRUD 管理画面を表示。Firestore パスの入力支援機能、GCS 共通設定編集、手動バックアップ実行（一括および個別）を提供します。
+  - **LINE レポート**: 設定ごとにバックアップ完了後のデータ数と JSON 容量を、選択した送信先へ通知します。
 - **アーキテクチャ**:
   - `index.php`: Google Cloud Functions のエントリポイント
   - `src/Handlers/`: HTTP リクエストおよび CloudEvent の処理ロジック
@@ -53,6 +54,9 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 | :--- | :--- | :--- |
 | `APP_ENV` | 実行環境（`production`, `test`, `local`）。 | はい |
 | `GCP_PROJECT_ID` | Google Cloud プロジェクト ID。未設定時は他の環境変数または gcloud CLI の設定値を使用します。 | 推奨 |
+| `LINE_TOKENS_N_TARGETS` | LINE のチャネルアクセストークンと送信先IDのマッピング（JSON形式）。 | LINE通知を使う場合 |
+
+`LINE_TOKENS_N_TARGETS` は `tokens` と `target_ids` に同じキーを設定します。管理画面の各バックアップ設定で、そのキーを通知先として選択できます。
 
 ---
 

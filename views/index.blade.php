@@ -80,6 +80,17 @@
                     <label for="enabledNew" class="ml-2 block text-xs text-gray-300">このバックアップを有効にする</label>
                 </div>
 
+                <div>
+                    <label class="block text-xs font-medium text-gray-300 mb-1">LINE 通知先（任意）</label>
+                    <select name="lineTargetKey" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 shadow-sm border px-3 py-2">
+                        <option value="">通知しない</option>
+                        @foreach ($lineTargetOptions as $key => $label)
+                            <option value="{{ $key }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-gray-500 mt-1">バックアップ完了時にデータ数と容量を送信します。</p>
+                </div>
+
                 <div class="pt-2 flex justify-end">
                     <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded shadow transition cursor-pointer">
                         設定を追加する
@@ -198,6 +209,16 @@
                 <label for="editConfigEnabled" class="ml-2 block text-xs text-gray-300">このバックアップを有効にする</label>
             </div>
 
+            <div>
+                <label class="block text-xs font-medium text-gray-300 mb-1">LINE 通知先（任意）</label>
+                <select id="editLineTargetKey" name="lineTargetKey" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 shadow-sm border px-3 py-2">
+                    <option value="">通知しない</option>
+                    @foreach ($lineTargetOptions as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="pt-3 flex justify-end space-x-2 border-t border-gray-800">
                 <button type="button" onclick="closeEditModal()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 text-xs font-medium rounded transition cursor-pointer">
                     キャンセル
@@ -218,6 +239,7 @@
         document.getElementById('editConfigName').value = config.name;
         document.getElementById('editFirestorePath').value = config.firestorePath;
         document.getElementById('editConfigEnabled').checked = !!config.enabled;
+        document.getElementById('editLineTargetKey').value = config.lineTargetKey || '';
         document.getElementById('editModal').classList.remove('hidden');
     }
 

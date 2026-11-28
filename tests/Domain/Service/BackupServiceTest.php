@@ -8,6 +8,7 @@ use App\Domain\Model\BackupConfig;
 use App\Domain\Model\CommonConfig;
 use App\Domain\Repository\ConfigRepositoryInterface;
 use App\Domain\Service\BackupService;
+use App\Domain\Service\LineNotificationServiceInterface;
 use App\Domain\Service\StorageServiceInterface;
 use ArrayIterator;
 use Carbon\Carbon;
@@ -126,6 +127,46 @@ class BackupServiceTest extends TestCase
         $this->assertSame(1, $results['success']);
         $this->assertSame(0, $results['failed']);
         $this->assertCount(1, $uploaded);
+    }
+
+    public function testBackupAllReportsCountAndSizeToSelectedLineDestination(): void
+    {
+        $config = new BackupConfig('c1', 'config1', 'users/u1', true, null, null, 'oml');
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        $repoMock->method('getCommonConfig')->willReturn(new CommonConfig('test-bucket'));
+        $repoMock->method('getBackupConfigs')->willReturn(['c1' => $config]);
+        /** @var StorageServiceInterface&\PHPUnit\Framework\MockObject\MockObject $storageMock */
+        $storageMock = $this->createMock(StorageServiceInterface::class);
+        $notified = [];
+        $lineMock = new class($notified) implements LineNotificationServiceInterface {
+            /** @param array<int, array{config: BackupConfig, result: array<string, mixed>}> $notified */
+            public function __construct(public array &$notified)
+            {
+            }
+
+            /** @param array{success: bool, path: string, count: int, sizeBytes: int, error?: string} $result */
+            public function notify(BackupConfig $config, array $result): void
+            {
+                $this->notified[] = ['config' => $config, 'result' => $result];
+            }
+        };
+        /** @var FirestoreClient&\PHPUnit\Framework\MockObject\MockObject $firestoreMock */
+        $firestoreMock = $this->createMock(FirestoreClient::class);
+        $backupService = new class($repoMock, $storageMock, $firestoreMock, null, $lineMock) extends BackupService {
+            /** @return array<string, mixed> */
+            public function fetchDataFromPath(string $firestorePath): array
+            {
+                return ['item' => 'data'];
+            }
+        };
+
+        $backupService->backupAll(Carbon::parse('2026-11-01'));
+
+        $this->assertCount(1, $notified);
+        $this->assertSame('oml', $notified[0]['config']->getLineTargetKey());
+        $this->assertSame(1, $notified[0]['result']['count']);
+        $this->assertGreaterThan(0, $notified[0]['result']['sizeBytes']);
     }
 
     public function testFetchDataFromPathWithCollectionAndNestedSubcollections(): void

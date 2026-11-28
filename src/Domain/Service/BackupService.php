@@ -8,6 +8,7 @@ use App\Domain\Model\BackupConfig;
 use App\Domain\Model\CommonConfig;
 use App\Domain\Repository\ConfigRepositoryInterface;
 use App\Infrastructure\Firestore\FirestoreClientFactory;
+use App\Infrastructure\Notification\LineNotificationService;
 use Carbon\Carbon;
 use Google\Cloud\Firestore\CollectionReference;
 use Google\Cloud\Firestore\DocumentReference;
@@ -29,12 +30,14 @@ class BackupService
     private StorageServiceInterface $storageService;
     private FirestoreClient $firestoreClient;
     private LoggerInterface $logger;
+    private LineNotificationServiceInterface $lineNotificationService;
 
     public function __construct(
         ConfigRepositoryInterface $configRepository,
         StorageServiceInterface $storageService,
         ?FirestoreClient $firestoreClient = null,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?LineNotificationServiceInterface $lineNotificationService = null
     ) {
         $this->configRepository = $configRepository;
         $this->storageService = $storageService;
@@ -46,6 +49,7 @@ class BackupService
         } else {
             $this->logger = $logger;
         }
+        $this->lineNotificationService = $lineNotificationService ?? new LineNotificationService();
     }
 
     /**
@@ -54,7 +58,7 @@ class BackupService
      * @param BackupConfig $config バックアップ対象の設定
      * @param CommonConfig $commonConfig GCS共通設定
      * @param Carbon|null $date バックアップ基準日（未指定時は現在日時）
-     * @return array{success: bool, path: string, count: int, error?: string}
+     * @return array{success: bool, path: string, count: int, sizeBytes: int, error?: string}
      */
     public function backupSingleConfig(
         BackupConfig $config,
@@ -89,6 +93,7 @@ class BackupService
             ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
 
             $this->storageService->upload($bucket, $targetGcsPath, $jsonContent);
+            $sizeBytes = strlen($jsonContent);
 
             $this->logger->info("Successfully backed up '{$config->getName()}' to gs://{$bucket}/{$targetGcsPath} (" . count($data) . " items)");
 
@@ -96,6 +101,7 @@ class BackupService
                 'success' => true,
                 'path' => sprintf('gs://%s/%s', $bucket, $targetGcsPath),
                 'count' => count($data),
+                'sizeBytes' => $sizeBytes,
             ];
         } catch (Throwable $e) {
             $this->logger->error("Failed to backup '{$config->getName()}': " . $e->getMessage(), [
@@ -106,6 +112,7 @@ class BackupService
                 'success' => false,
                 'path' => sprintf('gs://%s/%s', $bucket, $targetGcsPath),
                 'count' => 0,
+                'sizeBytes' => 0,
                 'error' => $e->getMessage(),
             ];
         }
@@ -115,7 +122,7 @@ class BackupService
      * 有効なすべてのバックアップ設定を実行します。
      *
      * @param Carbon|null $date 基準日時
-     * @return array{total: int, success: int, failed: int, details: array<string, array{success: bool, path: string, count: int, error?: string}>}
+     * @return array{total: int, success: int, failed: int, details: array<string, array{success: bool, path: string, count: int, sizeBytes: int, error?: string}>}
      */
     public function backupAll(?Carbon $date = null): array
     {
@@ -137,6 +144,7 @@ class BackupService
 
             $res = $this->backupSingleConfig($config, $commonConfig, $date);
             $results[$config->getId()] = $res;
+            $this->notifyResult($config, $res);
 
             if ($res['success']) {
                 $successCount++;
@@ -151,6 +159,26 @@ class BackupService
             'failed' => $failedCount,
             'details' => $results,
         ];
+    }
+
+    /**
+     * 指定したバックアップ結果を設定済みのLINE送信先へ通知します。
+     *
+     * @param array{success: bool, path: string, count: int, sizeBytes: int, error?: string} $result
+     */
+    public function notifyResult(BackupConfig $config, array $result): void
+    {
+        if ($config->getLineTargetKey() === null) {
+            return;
+        }
+
+        try {
+            $this->lineNotificationService->notify($config, $result);
+        } catch (Throwable $e) {
+            $this->logger->error("Failed to send LINE report for '{$config->getName()}': " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+        }
     }
 
     /**

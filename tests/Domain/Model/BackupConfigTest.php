@@ -36,12 +36,13 @@ class BackupConfigTest extends TestCase
     public function testBackupConfigValid(): void
     {
         $now = Carbon::parse('2026-11-01 12:00:00');
-        $config = new BackupConfig('cfg-1', 'ユーザー情報', '/users/collection/', true, $now, $now);
+        $config = new BackupConfig('cfg-1', 'ユーザー情報', '/users/collection/', true, $now, $now, 'oml');
 
         $this->assertSame('cfg-1', $config->getId());
         $this->assertSame('ユーザー情報', $config->getName());
         $this->assertSame('users/collection', $config->getFirestorePath());
         $this->assertTrue($config->isEnabled());
+        $this->assertSame('oml', $config->getLineTargetKey());
         $this->assertSame($now, $config->getCreatedAt());
         $this->assertSame($now, $config->getUpdatedAt());
 
@@ -55,6 +56,7 @@ class BackupConfigTest extends TestCase
         $this->assertSame('ユーザー情報', $restored->getName());
         $this->assertSame('users/collection', $restored->getFirestorePath());
         $this->assertTrue($restored->isEnabled());
+        $this->assertSame('oml', $restored->getLineTargetKey());
     }
 
     public function testBackupConfigValidation(): void
