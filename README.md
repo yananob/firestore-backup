@@ -13,6 +13,7 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 - **機能概要**:
   - **CloudEvent 起動 (`main_event`)**: 設定された複数の Firestore パスからデータをエクスポートし、GCS 共通設定（`{ベースパス}/{YYYYMMDD}/{configName}_{configId}.json`）へ保存します。
   - **HTTP 起動 (`main_http`)**: バックアップ設定の CRUD 管理画面を表示。Firestore パスの入力支援機能、GCS 共通設定編集、手動バックアップ実行（一括および個別）を提供します。
+  - **LINE レポート**: 共通設定で選択した一つの送信先へ、全バックアップ設定の成否・データ数・JSON容量を一括通知します。
 - **アーキテクチャ**:
   - `index.php`: Google Cloud Functions のエントリポイント
   - `src/Handlers/`: HTTP リクエストおよび CloudEvent の処理ロジック
@@ -53,6 +54,11 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 | :--- | :--- | :--- |
 | `APP_ENV` | 実行環境（`production`, `test`, `local`）。 | はい |
 | `GCP_PROJECT_ID` | Google Cloud プロジェクト ID。未設定時は他の環境変数または gcloud CLI の設定値を使用します。 | 推奨 |
+| `LINE_TOKENS_N_TARGETS` | LINE のチャネルアクセストークンと送信先IDのマッピング（JSON形式）。 | LINE通知を使う場合 |
+
+`LINE_TOKENS_N_TARGETS` の `tokens` と `target_ids` にそれぞれキーを設定します。管理画面のGCS共通設定でトークンと通知先を別々に一つずつ選択すると、一括バックアップの結果がまとめて通知されます。既存の通知先設定は、トークンを選び直すまで従来どおり同じキーのトークンを使用します。
+
+デプロイと `tests/run_tests.sh` では、Google Cloud Secret Manager の `LINE_TOKENS_N_TARGETS` の最新バージョンを使用します。対象プロジェクトにシークレットを作成し、デプロイ・テスト用および関数実行用のサービスアカウントにアクセス権を付与してください。本番のHTTP・イベント関数とテストのHTTP関数に設定されます。
 
 ---
 
