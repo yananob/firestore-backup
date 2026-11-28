@@ -14,17 +14,24 @@ class BackupConfigTest extends TestCase
 {
     public function testCommonConfigValid(): void
     {
-        $config = new CommonConfig('my-bucket', '/backups/path/');
+        $config = new CommonConfig('my-bucket', '/backups/path/', 'group', 'bot');
         $this->assertSame('my-bucket', $config->getBucket());
         $this->assertSame('backups/path', $config->getBasePath());
+        $this->assertSame('group', $config->getLineTargetKey());
+        $this->assertSame('bot', $config->getLineTokenKey());
 
         $array = $config->toArray();
         $this->assertSame('my-bucket', $array['bucket']);
         $this->assertSame('backups/path', $array['basePath']);
+        $this->assertSame('group', $array['lineTargetKey']);
+        $this->assertSame('bot', $array['lineTokenKey']);
 
         $restored = CommonConfig::fromArray($array);
         $this->assertSame('my-bucket', $restored->getBucket());
         $this->assertSame('backups/path', $restored->getBasePath());
+        $this->assertSame('group', $restored->getLineTargetKey());
+        $this->assertSame('bot', $restored->getLineTokenKey());
+        $this->assertSame('legacy', CommonConfig::fromArray(['bucket' => 'bucket', 'lineTargetKey' => 'legacy'])->getLineTokenKey());
     }
 
     public function testCommonConfigThrowsOnEmptyBucket(): void

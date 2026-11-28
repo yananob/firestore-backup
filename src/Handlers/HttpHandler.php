@@ -130,6 +130,8 @@ class HttpHandler
             'requestPath' => $requestPath,
             'commonConfig' => $commonConfig,
             'configs' => $configs,
+            'lineTargetOptions' => AppConfig::getLineTargetOptions(),
+            'lineTokenOptions' => AppConfig::getLineTokenOptions(),
             'message' => $message,
         ]);
     }
@@ -139,8 +141,13 @@ class HttpHandler
         $params = $this->parsePostParams($request);
         $bucket = isset($params['bucket']) && is_string($params['bucket']) ? $params['bucket'] : '';
         $subPath = isset($params['basePath']) && is_string($params['basePath']) ? $params['basePath'] : '';
+        $lineTargetKey = isset($params['lineTargetKey']) && is_string($params['lineTargetKey']) ? $params['lineTargetKey'] : null;
+        $lineTokenKey = isset($params['lineTokenKey']) && is_string($params['lineTokenKey']) ? $params['lineTokenKey'] : null;
+        if ($lineTargetKey !== null && trim($lineTargetKey) !== '' && array_key_exists('lineTokenKey', $params) && ($lineTokenKey === null || trim($lineTokenKey) === '')) {
+            return $this->redirectWithAlert($basePath, 'error', 'LINE通知先を選択する場合は送信用トークンも選択してください。');
+        }
 
-        $config = new CommonConfig($bucket, $subPath);
+        $config = new CommonConfig($bucket, $subPath, $lineTargetKey, $lineTokenKey);
         $this->configRepository->saveCommonConfig($config);
 
         return $this->redirectWithAlert($basePath, 'success', 'GCS共通設定を保存しました。');
@@ -221,8 +228,12 @@ class HttpHandler
             }
 
             $result = $this->backupService->backupSingleConfig($config, $commonConfig);
+            $this->backupService->notifyResults($commonConfig, [[
+                'configName' => $config->getName(),
+                ...$result,
+            ]]);
             if ($result['success']) {
-                $msg = sprintf("バックアップ完了: %s (%d 件のデータをエクスポート -> %s)", $config->getName(), $result['count'], $result['path']);
+                $msg = sprintf("バックアップ完了: %s (%d 件、%d bytes -> %s)", $config->getName(), $result['count'], $result['sizeBytes'], $result['path']);
                 return $this->redirectWithAlert($basePath, 'success', $msg);
             }
 

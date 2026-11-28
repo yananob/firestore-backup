@@ -111,4 +111,82 @@ class AppConfig
             default => '',
         };
     }
+
+    /**
+     * LINE送信用トークンと送信先IDのマッピングを取得します。
+     *
+     * @return array{tokens: array<string, string>, target_ids: array<string, string>}
+     */
+    public static function getLineConfig(): array
+    {
+        $raw = getenv('LINE_TOKENS_N_TARGETS');
+        if (!is_string($raw) || trim($raw) === '') {
+            $raw = $_ENV['LINE_TOKENS_N_TARGETS'] ?? $_SERVER['LINE_TOKENS_N_TARGETS'] ?? null;
+        }
+
+        if (!is_string($raw) || trim($raw) === '') {
+            return ['tokens' => [], 'target_ids' => []];
+        }
+
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new RuntimeException('LINE_TOKENS_N_TARGETS is not valid JSON: ' . $e->getMessage(), 0, $e);
+        }
+
+        if (!is_array($decoded)) {
+            throw new RuntimeException('LINE_TOKENS_N_TARGETS must decode to an array.');
+        }
+
+        return [
+            'tokens' => self::filterStringMap($decoded['tokens'] ?? []),
+            'target_ids' => self::filterStringMap($decoded['target_ids'] ?? []),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function filterStringMap(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($value as $key => $item) {
+            if (is_string($key) && (is_scalar($item) || $item === null)) {
+                $result[$key] = (string) $item;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * LINE通知先の設定キーを取得します。
+     *
+     * @return array<string, string>
+     */
+    public static function getLineTargetOptions(): array
+    {
+        $keys = array_keys(self::getLineConfig()['target_ids']);
+        return array_combine($keys, $keys);
+    }
+
+    /**
+     * LINE送信用トークンの設定キーを取得します。
+     *
+     * @return array<string, string>
+     */
+    public static function getLineTokenOptions(): array
+    {
+        $keys = array_keys(self::getLineConfig()['tokens']);
+        $options = [];
+        foreach ($keys as $key) {
+            $options[$key] = $key;
+        }
+
+        return $options;
+    }
 }
