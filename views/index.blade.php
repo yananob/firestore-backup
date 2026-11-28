@@ -29,6 +29,15 @@
                     <p class="text-[11px] text-gray-500 mt-1">保存先プレフィックス。末尾に「/YYYYMMDD」が付与されます。</p>
                 </div>
                 <div>
+                    <label class="block text-xs font-medium text-gray-300 mb-1">LINE 送信用トークン</label>
+                    <select name="lineTokenKey" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 shadow-sm border px-3 py-2">
+                        <option value="">選択してください</option>
+                        @foreach ($lineTokenOptions as $key => $label)
+                            <option value="{{ $key }}" {{ $commonConfig && $commonConfig->getLineTokenKey() === $key ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label class="block text-xs font-medium text-gray-300 mb-1">LINE 通知先（任意）</label>
                     <select name="lineTargetKey" class="w-full text-sm rounded-md bg-gray-950 border-gray-700 text-gray-100 shadow-sm border px-3 py-2">
                         <option value="">通知しない</option>

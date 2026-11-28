@@ -164,14 +164,24 @@ class AppConfig
     }
 
     /**
-     * LINE通知に利用できる設定キーを取得します。
+     * LINE通知先の設定キーを取得します。
      *
      * @return array<string, string>
      */
     public static function getLineTargetOptions(): array
     {
-        $config = self::getLineConfig();
-        $keys = array_intersect(array_keys($config['tokens']), array_keys($config['target_ids']));
+        $keys = array_keys(self::getLineConfig()['target_ids']);
+        return array_combine($keys, $keys);
+    }
+
+    /**
+     * LINE送信用トークンの設定キーを取得します。
+     *
+     * @return array<string, string>
+     */
+    public static function getLineTokenOptions(): array
+    {
+        $keys = array_keys(self::getLineConfig()['tokens']);
         $options = [];
         foreach ($keys as $key) {
             $options[$key] = $key;

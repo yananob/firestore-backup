@@ -16,6 +16,64 @@ use PHPUnit\Framework\TestCase;
 
 class HttpHandlerTest extends TestCase
 {
+    public function testIndexShowsIndependentLineOptionsAndSelectedValues(): void
+    {
+        $originalLineConfig = getenv('LINE_TOKENS_N_TARGETS');
+        putenv('LINE_TOKENS_N_TARGETS=' . json_encode([
+            'tokens' => ['bot' => 'example-token'],
+            'target_ids' => ['group' => 'group-id'],
+        ], JSON_THROW_ON_ERROR));
+
+        try {
+            /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+            $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+            $repoMock->method('getCommonConfig')->willReturn(new CommonConfig('bucket', '', 'group', 'bot'));
+            $repoMock->method('getBackupConfigs')->willReturn([]);
+            /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
+            $backupServiceMock = $this->createMock(BackupService::class);
+            /** @var FirestorePathService&\PHPUnit\Framework\MockObject\MockObject $pathServiceMock */
+            $pathServiceMock = $this->createMock(FirestorePathService::class);
+            $handler = new HttpHandler($repoMock, $backupServiceMock, $pathServiceMock);
+
+            $html = $handler->handle(new ServerRequest('GET', '/'));
+
+            $this->assertStringContainsString('name="lineTargetKey"', $html);
+            $this->assertStringContainsString('value="group" selected', $html);
+            $this->assertStringContainsString('name="lineTokenKey"', $html);
+            $this->assertStringContainsString('value="bot" selected', $html);
+            $this->assertStringNotContainsString('example-token', $html);
+            $this->assertStringNotContainsString('group-id', $html);
+        } finally {
+            if ($originalLineConfig === false) {
+                putenv('LINE_TOKENS_N_TARGETS');
+            } else {
+                putenv('LINE_TOKENS_N_TARGETS=' . $originalLineConfig);
+            }
+        }
+    }
+
+    public function testSaveCommonConfigRejectsMissingTokenForTarget(): void
+    {
+        /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
+        $repoMock = $this->createMock(ConfigRepositoryInterface::class);
+        $repoMock->expects($this->never())->method('saveCommonConfig');
+        /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
+        $backupServiceMock = $this->createMock(BackupService::class);
+        /** @var FirestorePathService&\PHPUnit\Framework\MockObject\MockObject $pathServiceMock */
+        $pathServiceMock = $this->createMock(FirestorePathService::class);
+        /** @var BladeOne&\PHPUnit\Framework\MockObject\MockObject $bladeMock */
+        $bladeMock = $this->createMock(BladeOne::class);
+
+        $handler = new HttpHandler($repoMock, $backupServiceMock, $pathServiceMock, $bladeMock);
+        $response = $handler->handle((new ServerRequest('POST', '/settings/common'))->withParsedBody([
+            'bucket' => 'bucket',
+            'lineTargetKey' => 'group',
+            'lineTokenKey' => '',
+        ]));
+
+        $this->assertStringContainsString('msg_type=error', $response);
+    }
+
     public function testHandleGetIndexRendersHtml(): void
     {
         /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
@@ -73,7 +131,7 @@ class HttpHandlerTest extends TestCase
         /** @var ConfigRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject $repoMock */
         $repoMock = $this->createMock(ConfigRepositoryInterface::class);
         $repoMock->expects($this->once())->method('saveCommonConfig')
-            ->with($this->callback(static fn (CommonConfig $config): bool => $config->getLineTargetKey() === 'oml'));
+            ->with($this->callback(static fn (CommonConfig $config): bool => $config->getLineTargetKey() === 'group' && $config->getLineTokenKey() === 'bot'));
 
         /** @var BackupService&\PHPUnit\Framework\MockObject\MockObject $backupServiceMock */
         $backupServiceMock = $this->createMock(BackupService::class);
@@ -86,7 +144,8 @@ class HttpHandlerTest extends TestCase
         $request = (new ServerRequest('POST', '/settings/common'))->withParsedBody([
             'bucket' => 'my-bucket',
             'basePath' => 'backups',
-            'lineTargetKey' => 'oml',
+            'lineTargetKey' => 'group',
+            'lineTokenKey' => 'bot',
         ]);
 
         $response = $handler->handle($request);

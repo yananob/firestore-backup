@@ -7,13 +7,19 @@ namespace App\Infrastructure\Notification;
 use App\AppConfig;
 use App\Domain\Model\CommonConfig;
 use App\Domain\Service\LineNotificationServiceInterface;
+use GuzzleHttp\ClientInterface;
 use LINE\Clients\MessagingApi\Api\MessagingApiApi;
 use LINE\Clients\MessagingApi\Model\PushMessageRequest;
 use LINE\Clients\MessagingApi\Model\TextMessage;
 use LINE\Clients\MessagingApi\Configuration;
+use RuntimeException;
 
 class LineNotificationService implements LineNotificationServiceInterface
 {
+    public function __construct(private ?ClientInterface $client = null)
+    {
+    }
+
     /**
      * @param array<int, array{configName: string, success: bool, path: string, count: int, sizeBytes: int, skipped?: bool, error?: string}> $results
      */
@@ -25,10 +31,11 @@ class LineNotificationService implements LineNotificationServiceInterface
         }
 
         $lineConfigData = AppConfig::getLineConfig();
-        $token = $lineConfigData['tokens'][$key] ?? null;
+        $tokenKey = $config->getLineTokenKey();
+        $token = $tokenKey !== null ? ($lineConfigData['tokens'][$tokenKey] ?? null) : null;
         $targetId = $lineConfigData['target_ids'][$key] ?? null;
         if ($token === null || $token === '' || $targetId === null || $targetId === '') {
-            return;
+            throw new RuntimeException('LINEのトークンまたは通知先が設定されていません。');
         }
 
         $successCount = 0;
@@ -77,7 +84,7 @@ class LineNotificationService implements LineNotificationServiceInterface
 
         $lineConfig = new Configuration();
         $lineConfig->setAccessToken($token);
-        $api = new MessagingApiApi(null, $lineConfig);
+        $api = new MessagingApiApi($this->client, $lineConfig);
         $api->pushMessage(new PushMessageRequest([
             'to' => $targetId,
             'messages' => [new TextMessage(['text' => $message])],

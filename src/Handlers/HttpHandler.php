@@ -131,6 +131,7 @@ class HttpHandler
             'commonConfig' => $commonConfig,
             'configs' => $configs,
             'lineTargetOptions' => AppConfig::getLineTargetOptions(),
+            'lineTokenOptions' => AppConfig::getLineTokenOptions(),
             'message' => $message,
         ]);
     }
@@ -141,8 +142,12 @@ class HttpHandler
         $bucket = isset($params['bucket']) && is_string($params['bucket']) ? $params['bucket'] : '';
         $subPath = isset($params['basePath']) && is_string($params['basePath']) ? $params['basePath'] : '';
         $lineTargetKey = isset($params['lineTargetKey']) && is_string($params['lineTargetKey']) ? $params['lineTargetKey'] : null;
+        $lineTokenKey = isset($params['lineTokenKey']) && is_string($params['lineTokenKey']) ? $params['lineTokenKey'] : null;
+        if ($lineTargetKey !== null && trim($lineTargetKey) !== '' && array_key_exists('lineTokenKey', $params) && ($lineTokenKey === null || trim($lineTokenKey) === '')) {
+            return $this->redirectWithAlert($basePath, 'error', 'LINE通知先を選択する場合は送信用トークンも選択してください。');
+        }
 
-        $config = new CommonConfig($bucket, $subPath, $lineTargetKey);
+        $config = new CommonConfig($bucket, $subPath, $lineTargetKey, $lineTokenKey);
         $this->configRepository->saveCommonConfig($config);
 
         return $this->redirectWithAlert($basePath, 'success', 'GCS共通設定を保存しました。');

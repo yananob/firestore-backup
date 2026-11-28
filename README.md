@@ -56,7 +56,7 @@ Google Cloud Functions (PHP 8.4) 上で動作する Firestore バックアップ
 | `GCP_PROJECT_ID` | Google Cloud プロジェクト ID。未設定時は他の環境変数または gcloud CLI の設定値を使用します。 | 推奨 |
 | `LINE_TOKENS_N_TARGETS` | LINE のチャネルアクセストークンと送信先IDのマッピング（JSON形式）。 | LINE通知を使う場合 |
 
-`LINE_TOKENS_N_TARGETS` は `tokens` と `target_ids` に同じキーを設定します。管理画面のGCS共通設定で通知先を一つ選択すると、一括バックアップの結果がまとめて通知されます。
+`LINE_TOKENS_N_TARGETS` の `tokens` と `target_ids` にそれぞれキーを設定します。管理画面のGCS共通設定でトークンと通知先を別々に一つずつ選択すると、一括バックアップの結果がまとめて通知されます。既存の通知先設定は、トークンを選び直すまで従来どおり同じキーのトークンを使用します。
 
 ---
 

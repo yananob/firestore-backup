@@ -79,13 +79,14 @@ class AppConfigTest extends TestCase
         $this->assertSame('', AppConfig::getBasePath());
     }
 
-    public function testGetLineTargetOptionsReturnsOnlyCompleteMappings(): void
+    public function testLineOptionsUseTheirRespectiveKeys(): void
     {
         putenv('LINE_TOKENS_N_TARGETS=' . json_encode([
-            'tokens' => ['oml' => 'token', 'incomplete' => 'token'],
-            'target_ids' => ['oml' => 'target'],
+            'tokens' => ['bot' => 'token'],
+            'target_ids' => ['group' => 'target', 'user' => 'target2'],
         ], JSON_THROW_ON_ERROR));
 
-        $this->assertSame(['oml' => 'oml'], AppConfig::getLineTargetOptions());
+        $this->assertSame(['group' => 'group', 'user' => 'user'], AppConfig::getLineTargetOptions());
+        $this->assertSame(['bot' => 'bot'], AppConfig::getLineTokenOptions());
     }
 }
